@@ -48,23 +48,51 @@
             padding: 20px;
         }
         .flashcard {
-            background: white;
+            perspective: 1000px;
+            height: 350px;
+            cursor: pointer;
+        }
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
             border-radius: 20px;
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s, box-shadow 0.3s;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        .flashcard:hover {
-            transform: translateY(-10px);
+        .flashcard-front {
+            background: white;
+        }
+        .flashcard-back {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: rotateY(180deg);
+        }
+        .flashcard:hover .flashcard-front,
+        .flashcard:hover .flashcard-back {
             box-shadow: 0 15px 40px rgba(0,0,0,0.3);
         }
         .flashcard-image {
             width: 100%;
-            height: 200px;
+            height: 180px;
             object-fit: contain;
             border-radius: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             background: #f8f9fa;
             padding: 10px;
         }
@@ -72,19 +100,23 @@
             font-size: 1.5em;
             color: #333;
             font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .divider {
-            width: 50px;
-            height: 3px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 15px auto;
-            border-radius: 2px;
         }
         .translated-word {
-            font-size: 1.8em;
-            color: #667eea;
+            font-size: 2.2em;
+            color: white;
             font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .flip-hint {
+            font-size: 0.9em;
+            color: #999;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .back-hint {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 15px;
         }
         .count {
             color: rgba(255, 255, 255, 0.9);
@@ -104,14 +136,21 @@
 
     <div class="flashcards-grid">
         {% for card in flashcards %}
-        <div class="flashcard">
-            <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
-                 alt="{{ card['english_word'] }}" 
-                 class="flashcard-image"
-                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-            <div class="english-word">{{ card['english_word'] }}</div>
-            <div class="divider"></div>
-            <div class="translated-word">{{ card['translated_word'] }}</div>
+        <div class="flashcard" onclick="this.classList.toggle('flipped')">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
+                         alt="{{ card['english_word'] }}" 
+                         class="flashcard-image"
+                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+                    <div class="english-word">{{ card['english_word'] }}</div>
+                    <div class="flip-hint">Click to reveal</div>
+                </div>
+                <div class="flashcard-back">
+                    <div class="translated-word">{{ card['translated_word'] }}</div>
+                    <div class="back-hint">Click to flip back</div>
+                </div>
+            </div>
         </div>
         {% endfor %}
     </div>
