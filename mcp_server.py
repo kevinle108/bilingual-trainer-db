@@ -111,6 +111,282 @@ def get_language_stats():
     finally:
         conn.close()
 
+@mcp.tool()
+def add_flashcard(english_word: str, image_file: str, translations: dict):
+    """Add a new flashcard with translations to the database.
+    
+    Args:
+        english_word: The English word (e.g., 'apple')
+        image_file: The image filename (e.g., 'apple.png')
+        translations: Dictionary mapping language codes to translated words
+                     e.g., {"es": "manzana", "fr": "pomme", "vi": "táo"}
+    
+    Returns:
+        Dictionary with success status and the new word_id
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    try:
+        # Check if word already exists
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        existing = cur.fetchone()
+        if existing:
+            return {"error": f"Word '{english_word}' already exists with id {existing[0]}"}
+        
+        # Insert the word
+        cur.execute('INSERT INTO Word_Image (english_word, image_file) VALUES (?, ?)', 
+                   (english_word, image_file))
+        word_id = cur.lastrowid
+        
+        # Insert translations
+        translation_count = 0
+        for lang_code, translated_word in translations.items():
+            cur.execute('INSERT INTO Translation (word_id, language_code, translated_word) VALUES (?, ?, ?)',
+                       (word_id, lang_code, translated_word))
+            translation_count += 1
+        
+        conn.commit()
+        return {
+            "success": True,
+            "word_id": word_id,
+            "english_word": english_word,
+            "translations_added": translation_count
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def add_translation(english_word: str, language_code: str, translated_word: str):
+    """Add a translation for an existing word.
+    
+    Args:
+        english_word: The English word to add translation for
+        language_code: Language code (e.g., 'es', 'fr', 'vi', 'de', 'ja')
+        translated_word: The translated word
+    
+    Returns:
+        Dictionary with success status
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    try:
+        # Get the word_id
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        result = cur.fetchone()
+        if not result:
+            return {"error": f"Word '{english_word}' not found"}
+        
+        word_id = result[0]
+        
+        # Check if translation already exists
+        cur.execute('SELECT id FROM Translation WHERE word_id = ? AND language_code = ?',
+                   (word_id, language_code))
+        if cur.fetchone():
+            return {"error": f"Translation for '{english_word}' in '{language_code}' already exists"}
+        
+        # Insert translation
+        cur.execute('INSERT INTO Translation (word_id, language_code, translated_word) VALUES (?, ?, ?)',
+                   (word_id, language_code, translated_word))
+        conn.commit()
+        
+        return {
+            "success": True,
+            "english_word": english_word,
+            "language_code": language_code,
+            "translated_word": translated_word
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def update_word(english_word: str, new_english_word: str = None, new_image_file: str = None):
+    """Update an existing word's English name or image file.
+    
+    Args:
+        english_word: The current English word
+        new_english_word: New English word (optional)
+        new_image_file: New image filename (optional)
+    
+    Returns:
+        Dictionary with success status
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    try:
+        # Check if word exists
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        result = cur.fetchone()
+        if not result:
+            return {"error": f"Word '{english_word}' not found"}
+        
+        # Build update query
+        updates = []
+        params = []
+        if new_english_word:
+            updates.append("english_word = ?")
+            params.append(new_english_word)
+        if new_image_file:
+            updates.append("image_file = ?")
+            params.append(new_image_file)
+        
+        if not updates:
+            return {"error": "No updates provided"}
+        
+        params.append(english_word)
+        query = f"UPDATE Word_Image SET {', '.join(updates)} WHERE english_word = ?"
+        cur.execute(query, params)
+        conn.commit()
+        
+        return {
+            "success": True,
+            "updated": {
+                "english_word": new_english_word if new_english_word else english_word,
+                "image_file": new_image_file if new_image_file else "unchanged"
+            }
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def update_translation(english_word: str, language_code: str, new_translated_word: str):
+    """Update an existing translation.
+    
+    Args:
+        english_word: The English word
+        language_code: Language code (e.g., 'es', 'fr', 'vi')
+        new_translated_word: The new translated word
+    
+    Returns:
+        Dictionary with success status
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    try:
+        # Get word_id
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        result = cur.fetchone()
+        if not result:
+            return {"error": f"Word '{english_word}' not found"}
+        
+        word_id = result[0]
+        
+        # Update translation
+        cur.execute('''UPDATE Translation 
+                      SET translated_word = ? 
+                      WHERE word_id = ? AND language_code = ?''',
+                   (new_translated_word, word_id, language_code))
+        
+        if cur.rowcount == 0:
+            return {"error": f"Translation for '{english_word}' in '{language_code}' not found"}
+        
+        conn.commit()
+        return {
+            "success": True,
+            "english_word": english_word,
+            "language_code": language_code,
+            "new_translation": new_translated_word
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def delete_flashcard(english_word: str):
+    """Delete a flashcard and all its translations.
+    
+    Args:
+        english_word: The English word to delete
+    
+    Returns:
+        Dictionary with success status and count of deleted translations
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    try:
+        # Get word_id
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        result = cur.fetchone()
+        if not result:
+            return {"error": f"Word '{english_word}' not found"}
+        
+        word_id = result[0]
+        
+        # Count translations to delete
+        cur.execute('SELECT COUNT(*) FROM Translation WHERE word_id = ?', (word_id,))
+        translation_count = cur.fetchone()[0]
+        
+        # Delete translations first (foreign key constraint)
+        cur.execute('DELETE FROM Translation WHERE word_id = ?', (word_id,))
+        
+        # Delete word
+        cur.execute('DELETE FROM Word_Image WHERE id = ?', (word_id,))
+        
+        conn.commit()
+        return {
+            "success": True,
+            "deleted_word": english_word,
+            "deleted_translations": translation_count
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def delete_translation(english_word: str, language_code: str):
+    """Delete a specific translation for a word.
+    
+    Args:
+        english_word: The English word
+        language_code: Language code to delete (e.g., 'es', 'fr', 'vi')
+    
+    Returns:
+        Dictionary with success status
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    try:
+        # Get word_id
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        result = cur.fetchone()
+        if not result:
+            return {"error": f"Word '{english_word}' not found"}
+        
+        word_id = result[0]
+        
+        # Delete translation
+        cur.execute('DELETE FROM Translation WHERE word_id = ? AND language_code = ?',
+                   (word_id, language_code))
+        
+        if cur.rowcount == 0:
+            return {"error": f"Translation for '{english_word}' in '{language_code}' not found"}
+        
+        conn.commit()
+        return {
+            "success": True,
+            "deleted": {
+                "english_word": english_word,
+                "language_code": language_code
+            }
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
 if __name__ == '__main__':
     # Run the MCP server using stdio transport
     mcp.run(transport="stdio")
