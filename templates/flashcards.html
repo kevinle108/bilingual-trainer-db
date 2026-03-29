@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ language_name }} Flashcards</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .back-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: background 0.2s;
+            margin-top: 15px;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .flashcards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .flashcard {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+        }
+        .flashcard:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        .flashcard-image {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 10px;
+        }
+        .english-word {
+            font-size: 1.5em;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .divider {
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 15px auto;
+            border-radius: 2px;
+        }
+        .translated-word {
+            font-size: 1.8em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .count {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            {% if language == 'es' %}🇪🇸{% elif language == 'fr' %}🇫🇷{% elif language == 'vi' %}🇻🇳{% endif %}
+            {{ language_name }} Flashcards
+        </h1>
+        <p class="count">{{ flashcards|length }} words to learn</p>
+        <a href="/" class="back-btn">← Back to Languages</a>
+    </div>
+
+    <div class="flashcards-grid">
+        {% for card in flashcards %}
+        <div class="flashcard">
+            <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
+                 alt="{{ card['english_word'] }}" 
+                 class="flashcard-image"
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+            <div class="english-word">{{ card['english_word'] }}</div>
+            <div class="divider"></div>
+            <div class="translated-word">{{ card['translated_word'] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilingual Trainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+        }
+        .language-grid {
+            display: grid;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .language-btn {
+            display: block;
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 15px;
+            font-size: 1.3em;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .language-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+        }
+        .flag {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎴 Bilingual Trainer</h1>
+        <p class="subtitle">Choose a language to start learning</p>
+        
+        <div class="language-grid">
+            {% for lang in languages %}
+                <a href="/flashcards?lang={{ lang['language_code'] }}" class="language-btn">
+                    {% if lang['language_code'] == 'es' %}
+                        <span class="flag">🇪🇸</span> Spanish
+                    {% elif lang['language_code'] == 'fr' %}
+                        <span class="flag">🇫🇷</span> French
+                    {% elif lang['language_code'] == 'vi' %}
+                        <span class="flag">🇻🇳</span> Vietnamese
+                    {% else %}
+                        {{ language_names.get(lang['language_code'], lang['language_code']) }}
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
