@@ -63,49 +63,12 @@
             font-size: 2em;
             margin-right: 10px;
         }
-        .card-count-section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        .card-count-section label {
-            display: block;
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-        .card-count-section input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1.1em;
-            text-align: center;
-        }
-        .card-count-section input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .card-count-section small {
-            display: block;
-            color: #666;
-            margin-top: 8px;
-            font-size: 0.9em;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎴 Bilingual Trainer</h1>
         <p class="subtitle">Choose a language to start learning</p>
-        
-        <div class="card-count-section">
-            <label for="cardCount">Number of cards (optional)</label>
-            <input type="number" id="cardCount" min="1" placeholder="All cards">
-            <small>Leave empty to show all cards</small>
-        </div>
         
         <div class="language-grid">
             {% for lang in languages %}
@@ -123,20 +86,5 @@
             {% endfor %}
         </div>
     </div>
-    
-    <script>
-        // Add card count parameter to language links
-        document.querySelectorAll('.language-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                const cardCount = document.getElementById('cardCount').value;
-                if (cardCount) {
-                    e.preventDefault();
-                    const url = new URL(this.href);
-                    url.searchParams.set('count', cardCount);
-                    window.location.href = url.toString();
-                }
-            });
-        });
-    </script>
 </body>
 </html>

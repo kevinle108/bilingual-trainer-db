@@ -49,6 +49,36 @@
         .button-group {
             margin-top: 20px;
         }
+        .card-limit-section {
+            text-align: center;
+            margin: 20px auto;
+            max-width: 400px;
+        }
+        .card-limit-section label {
+            color: white;
+            font-weight: 600;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+        .card-limit-section input {
+            padding: 8px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            font-size: 1em;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            width: 120px;
+        }
+        .card-limit-section input:focus {
+            outline: none;
+            border-color: white;
+        }
+        .card-limit-section small {
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
         .flashcards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -143,13 +173,7 @@
             {% if language == 'es' %}🇪🇸{% elif language == 'fr' %}🇫🇷{% elif language == 'vi' %}🇻🇳{% endif %}
             {{ language_name }} Flashcards
         </h1>
-        <p class="count">
-            {% if count %}
-                Showing {{ flashcards|length }} of {{ count }} requested words
-            {% else %}
-                {{ flashcards|length }} words to learn
-            {% endif %}
-        </p>
+        <p class="count" id="cardCount">{{ flashcards|length }} words to learn</p>
         <div class="button-group">
             <button class="toggle-btn" onclick="toggleLanguageDirection()" id="toggleBtn">
                 🔄 Show {{ language_name }} First
@@ -157,6 +181,12 @@
             <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
             <a href="/" class="back-btn">← Back to Languages</a>
         </div>
+    </div>
+    
+    <div class="card-limit-section">
+        <label for="cardLimit">Show cards:</label>
+        <input type="number" id="cardLimit" min="1" placeholder="All" value="">
+        <small>Leave empty to show all cards</small>
     </div>
 
     <div class="flashcards-grid">
@@ -186,6 +216,7 @@
     <script>
         let isReversed = false;
         const languageName = '{{ language_name }}';
+        const totalCards = {{ flashcards|length }};
         
         // Load saved preference from localStorage
         window.addEventListener('DOMContentLoaded', () => {
@@ -193,7 +224,31 @@
             if (savedMode === 'reversed') {
                 toggleLanguageDirection();
             }
+            
+            // Add event listener for card limit input
+            document.getElementById('cardLimit').addEventListener('input', filterCards);
         });
+        
+        function filterCards() {
+            const limit = parseInt(document.getElementById('cardLimit').value);
+            const cards = document.querySelectorAll('.flashcard');
+            const countElement = document.getElementById('cardCount');
+            
+            if (limit && limit > 0) {
+                cards.forEach((card, index) => {
+                    if (index < limit) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                const showing = Math.min(limit, totalCards);
+                countElement.textContent = `Showing ${showing} of ${totalCards} words`;
+            } else {
+                cards.forEach(card => card.style.display = '');
+                countElement.textContent = `${totalCards} words to learn`;
+            }
+        }
         
         function toggleLanguageDirection() {
             isReversed = !isReversed;
