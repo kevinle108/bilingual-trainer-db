@@ -130,7 +130,13 @@
             {% if language == 'es' %}🇪🇸{% elif language == 'fr' %}🇫🇷{% elif language == 'vi' %}🇻🇳{% endif %}
             {{ language_name }} Flashcards
         </h1>
-        <p class="count">{{ flashcards|length }} words to learn</p>
+        <p class="count">
+            {% if count %}
+                Showing {{ flashcards|length }} of {{ count }} requested words
+            {% else %}
+                {{ flashcards|length }} words to learn
+            {% endif %}
+        </p>
         <a href="/" class="back-btn">← Back to Languages</a>
     </div>
 

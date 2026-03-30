@@ -32,15 +32,21 @@ def index():
 @app.route('/flashcards')
 def flashcards():
     language = request.args.get('lang', 'es')
+    count = request.args.get('count', type=int)
     
     conn = get_db_connection()
-    flashcards = conn.execute('''
+    query = '''
         SELECT w.id, w.english_word, w.image_file, t.translated_word, t.language_code
         FROM Word_Image w
         JOIN Translation t ON w.id = t.word_id
         WHERE t.language_code = ?
         ORDER BY w.english_word
-    ''', (language,)).fetchall()
+    '''
+    
+    if count and count > 0:
+        query += f' LIMIT {count}'
+    
+    flashcards = conn.execute(query, (language,)).fetchall()
     conn.close()
     
     language_names = {
@@ -52,7 +58,8 @@ def flashcards():
     return render_template('flashcards.html', 
                          flashcards=flashcards, 
                          language=language,
-                         language_name=language_names.get(language, language))
+                         language_name=language_names.get(language, language),
+                         count=count)
 
 if __name__ == '__main__':
     app.run(debug=True)
