@@ -25,7 +25,7 @@
             font-size: 2.5em;
             margin-bottom: 10px;
         }
-        .back-btn, .shuffle-btn {
+        .back-btn, .shuffle-btn, .toggle-btn {
             display: inline-block;
             padding: 12px 30px;
             background: rgba(255, 255, 255, 0.2);
@@ -40,10 +40,10 @@
             cursor: pointer;
             font-size: 1em;
         }
-        .back-btn:hover, .shuffle-btn:hover {
+        .back-btn:hover, .shuffle-btn:hover, .toggle-btn:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-        .shuffle-btn {
+        .shuffle-btn, .toggle-btn {
             background: rgba(255, 255, 255, 0.25);
         }
         .button-group {
@@ -106,15 +106,18 @@
             background: #f8f9fa;
             padding: 10px;
         }
-        .english-word {
+        .english-word, .translated-word, .word-display {
             font-size: 1.5em;
             color: #333;
             font-weight: bold;
         }
-        .translated-word {
-            font-size: 2.2em;
+        .flashcard-front .word-display {
+            color: #333;
+            font-size: 1.5em;
+        }
+        .flashcard-back .word-display {
             color: white;
-            font-weight: bold;
+            font-size: 2.2em;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
         .flip-hint {
@@ -148,6 +151,9 @@
             {% endif %}
         </p>
         <div class="button-group">
+            <button class="toggle-btn" onclick="toggleLanguageDirection()" id="toggleBtn">
+                🔄 Show {{ language_name }} First
+            </button>
             <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
             <a href="/" class="back-btn">← Back to Languages</a>
         </div>
@@ -155,18 +161,21 @@
 
     <div class="flashcards-grid">
         {% for card in flashcards %}
-        <div class="flashcard" onclick="this.classList.toggle('flipped')">
+        <div class="flashcard" 
+             onclick="this.classList.toggle('flipped')"
+             data-english="{{ card['english_word'] }}"
+             data-translation="{{ card['translated_word'] }}">
             <div class="flashcard-inner">
                 <div class="flashcard-front">
                     <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
                          alt="{{ card['english_word'] }}" 
                          class="flashcard-image"
                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-                    <div class="english-word">{{ card['english_word'] }}</div>
+                    <div class="word-display front-word">{{ card['english_word'] }}</div>
                     <div class="flip-hint">Click to reveal</div>
                 </div>
                 <div class="flashcard-back">
-                    <div class="translated-word">{{ card['translated_word'] }}</div>
+                    <div class="word-display back-word">{{ card['translated_word'] }}</div>
                     <div class="back-hint">Click to flip back</div>
                 </div>
             </div>
@@ -175,6 +184,46 @@
     </div>
     
     <script>
+        let isReversed = false;
+        const languageName = '{{ language_name }}';
+        
+        // Load saved preference from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedMode = localStorage.getItem('flashcardMode');
+            if (savedMode === 'reversed') {
+                toggleLanguageDirection();
+            }
+        });
+        
+        function toggleLanguageDirection() {
+            isReversed = !isReversed;
+            const cards = document.querySelectorAll('.flashcard');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            cards.forEach(card => {
+                // Reset flip state
+                card.classList.remove('flipped');
+                
+                const englishWord = card.dataset.english;
+                const translatedWord = card.dataset.translation;
+                const frontWord = card.querySelector('.front-word');
+                const backWord = card.querySelector('.back-word');
+                
+                if (isReversed) {
+                    frontWord.textContent = translatedWord;
+                    backWord.textContent = englishWord;
+                    toggleBtn.innerHTML = '🔄 Show English First';
+                } else {
+                    frontWord.textContent = englishWord;
+                    backWord.textContent = translatedWord;
+                    toggleBtn.innerHTML = `🔄 Show ${languageName} First`;
+                }
+            });
+            
+            // Save preference to localStorage
+            localStorage.setItem('flashcardMode', isReversed ? 'reversed' : 'normal');
+        }
+        
         function shuffleCards() {
             const grid = document.querySelector('.flashcards-grid');
             const cards = Array.from(grid.children);
