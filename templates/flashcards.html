@@ -25,7 +25,7 @@
             font-size: 2.5em;
             margin-bottom: 10px;
         }
-        .back-btn {
+        .back-btn, .shuffle-btn {
             display: inline-block;
             padding: 12px 30px;
             background: rgba(255, 255, 255, 0.2);
@@ -35,9 +35,19 @@
             font-weight: bold;
             transition: background 0.2s;
             margin-top: 15px;
+            margin: 15px 10px 0;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
         }
-        .back-btn:hover {
+        .back-btn:hover, .shuffle-btn:hover {
             background: rgba(255, 255, 255, 0.3);
+        }
+        .shuffle-btn {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .button-group {
+            margin-top: 20px;
         }
         .flashcards-grid {
             display: grid;
@@ -137,7 +147,10 @@
                 {{ flashcards|length }} words to learn
             {% endif %}
         </p>
-        <a href="/" class="back-btn">← Back to Languages</a>
+        <div class="button-group">
+            <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
+            <a href="/" class="back-btn">← Back to Languages</a>
+        </div>
     </div>
 
     <div class="flashcards-grid">
@@ -160,5 +173,24 @@
         </div>
         {% endfor %}
     </div>
+    
+    <script>
+        function shuffleCards() {
+            const grid = document.querySelector('.flashcards-grid');
+            const cards = Array.from(grid.children);
+            
+            // Reset all flipped cards before shuffling
+            cards.forEach(card => card.classList.remove('flipped'));
+            
+            // Fisher-Yates shuffle algorithm
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            
+            // Re-append cards in shuffled order
+            cards.forEach(card => grid.appendChild(card));
+        }
+    </script>
 </body>
 </html>
