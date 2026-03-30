@@ -15,7 +15,7 @@ This MCP (Model Context Protocol) server allows GitHub Copilot to interact with 
 
 ## Available Tools
 
-The MCP server provides **9 tools** for full CRUD operations:
+The MCP server provides **11 tools** for full CRUD operations with image upload support:
 
 ### Read Operations
 
@@ -86,9 +86,37 @@ Add a translation to an existing word.
 add_translation("cat", "de", "Katze")  # Add German translation
 ```
 
+#### 6. `add_flashcard_with_image(english_word: str, image_data: str, image_extension: str, language_code: str, translated_word: str)`
+Add a new flashcard by uploading an image with a single translation.
+
+**Example:**
+```python
+# Image data should be base64 encoded
+add_flashcard_with_image("apple", "<base64_image_data>", "png", "es", "manzana")
+```
+
+**How to use:**
+1. Paste an image into Copilot chat
+2. Say: "Add this as a flashcard for 'apple' with Spanish translation 'manzana'"
+3. Copilot will extract the image, encode it, and call this tool
+4. The image is saved to `image-library/apple.png`
+5. Database is updated with the new word and translation
+
+#### 7. `add_multiple_translations_with_image(english_word: str, image_data: str, image_extension: str, translations: dict)`
+Add a new flashcard with an image and multiple translations at once.
+
+**Example:**
+```python
+add_multiple_translations_with_image("apple", "<base64_image_data>", "png", {
+    "es": "manzana",
+    "fr": "pomme",
+    "vi": "táo"
+})
+```
+
 ### Update Operations
 
-#### 6. `update_word(english_word: str, new_english_word: str, new_image_file: str)`
+#### 8. `update_word(english_word: str, new_english_word: str, new_image_file: str)`
 Update a word's English name or image file.
 
 **Example:**
@@ -97,7 +125,7 @@ update_word("cat", new_image_file="cat_new.png")
 update_word("bunny", new_english_word="rabbit")
 ```
 
-#### 7. `update_translation(english_word: str, language_code: str, new_translated_word: str)`
+#### 9. `update_translation(english_word: str, language_code: str, new_translated_word: str)`
 Update an existing translation.
 
 **Example:**
@@ -107,7 +135,7 @@ update_translation("cat", "es", "gatito")  # Change from "gato" to "gatito"
 
 ### Delete Operations
 
-#### 8. `delete_flashcard(english_word: str)`
+#### 10. `delete_flashcard(english_word: str)`
 Delete a flashcard and all its translations.
 
 **Example:**
@@ -115,7 +143,7 @@ Delete a flashcard and all its translations.
 delete_flashcard("pizza")  # Removes word and all translations
 ```
 
-#### 9. `delete_translation(english_word: str, language_code: str)`
+#### 11. `delete_translation(english_word: str, language_code: str)`
 Delete a specific translation.
 
 **Example:**
@@ -137,6 +165,8 @@ Once configured, you can ask Copilot to perform CRUD operations:
 - "Add a new flashcard for 'apple' with Spanish 'manzana', French 'pomme', and Vietnamese 'táo'"
 - "Add a German translation for 'cat'"
 - "Create a flashcard for 'table' with the image 'table.png'"
+- **With image upload:** Paste an image and say "Add this as a flashcard for 'apple' with Spanish translation 'manzana'"
+- **With image and multiple translations:** Paste an image and say "Add this as 'pear' with Spanish 'pera', French 'poire', and Vietnamese 'lê'"
 
 **Update:**
 - "Change the image file for 'dog' to 'dog_new.png'"
@@ -148,6 +178,33 @@ Once configured, you can ask Copilot to perform CRUD operations:
 - "Delete the entire flashcard for 'computer'"
 
 Copilot will automatically use the appropriate MCP tools to make changes to your database!
+
+## Image Upload Feature
+
+The MCP server now supports uploading images directly through Copilot chat!
+
+### How it works:
+
+1. **Paste an image** into the Copilot chat window
+2. **Describe what you want** in natural language:
+   - "Add this as a flashcard for 'apple' with Spanish 'manzana'"
+   - "Create a new word 'pear' with this image, Spanish 'pera' and French 'poire'"
+3. **Copilot will**:
+   - Extract the image data
+   - Encode it as base64
+   - Call the appropriate MCP tool
+   - Save the image to `image-library/`
+   - Update the database
+
+### Image handling:
+- Images are saved as `{word}.{extension}` (e.g., `apple.png`)
+- If a file already exists, it adds a number: `apple_0.png`, `apple_1.png`
+- Supported formats: PNG, JPG, JPEG (any format the browser supports)
+- If an error occurs, the image is automatically cleaned up (not saved)
+
+### Two image upload tools:
+1. **`add_flashcard_with_image`** - Add one translation at a time
+2. **`add_multiple_translations_with_image`** - Add multiple translations at once (more efficient)
 
 ## Database Schema
 

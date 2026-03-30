@@ -1,5 +1,9 @@
 from fastmcp import FastMCP
 import sqlite3
+import base64
+import os
+from pathlib import Path
+from typing import Optional
 
 mcp = FastMCP("bilingual-trainer")
 
@@ -205,7 +209,7 @@ def add_translation(english_word: str, language_code: str, translated_word: str)
         conn.close()
 
 @mcp.tool()
-def update_word(english_word: str, new_english_word: str = None, new_image_file: str = None):
+def update_word(english_word: str, new_english_word: Optional[str] = None, new_image_file: Optional[str] = None):
     """Update an existing word's English name or image file.
     
     Args:
@@ -383,6 +387,193 @@ def delete_translation(english_word: str, language_code: str):
         }
     except Exception as e:
         conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def add_flashcard_with_image(english_word: str, image_data: str, image_extension: str, 
+                              language_code: str, translated_word: str):
+    """Add a new flashcard by uploading an image and adding a translation.
+    
+    This tool:
+    1. Saves the image to the image-library folder
+    2. Creates a new Word_Image entry (or uses existing)
+    3. Adds the translation
+    
+    Args:
+        english_word: The English word (e.g., 'apple')
+        image_data: Base64 encoded image data
+        image_extension: File extension (e.g., 'png', 'jpg', 'jpeg')
+        language_code: Language code (e.g., 'es', 'fr', 'vi')
+        translated_word: The translated word
+    
+    Returns:
+        Dictionary with success status and details
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    
+    try:
+        # Decode the base64 image
+        image_bytes = base64.b64decode(image_data)
+        
+        # Create image filename
+        image_filename = f"{english_word}.{image_extension}"
+        image_path = Path("image-library") / image_filename
+        
+        # Check if file already exists, add number if needed
+        counter = 0
+        while image_path.exists():
+            image_filename = f"{english_word}_{counter}.{image_extension}"
+            image_path = Path("image-library") / image_filename
+            counter += 1
+        
+        # Save the image file
+        with open(image_path, 'wb') as f:
+            f.write(image_bytes)
+        
+        # Check if word already exists
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        result = cur.fetchone()
+        
+        if result:
+            # Word exists, just add translation
+            word_id = result[0]
+            
+            # Check if translation already exists
+            cur.execute('SELECT id FROM Translation WHERE word_id = ? AND language_code = ?',
+                       (word_id, language_code))
+            if cur.fetchone():
+                os.remove(image_path)  # Remove the uploaded image since we're not using it
+                return {"error": f"Translation for '{english_word}' in '{language_code}' already exists"}
+            
+            # Add translation
+            cur.execute('INSERT INTO Translation (word_id, language_code, translated_word) VALUES (?, ?, ?)',
+                       (word_id, language_code, translated_word))
+            
+            conn.commit()
+            return {
+                "success": True,
+                "action": "translation_added",
+                "word_id": word_id,
+                "english_word": english_word,
+                "image_file": image_filename,
+                "language_code": language_code,
+                "translated_word": translated_word,
+                "note": "Word already existed, added new translation"
+            }
+        else:
+            # New word, create entry and translation
+            cur.execute('INSERT INTO Word_Image (english_word, image_file) VALUES (?, ?)',
+                       (english_word, image_filename))
+            word_id = cur.lastrowid
+            
+            cur.execute('INSERT INTO Translation (word_id, language_code, translated_word) VALUES (?, ?, ?)',
+                       (word_id, language_code, translated_word))
+            
+            conn.commit()
+            return {
+                "success": True,
+                "action": "flashcard_created",
+                "word_id": word_id,
+                "english_word": english_word,
+                "image_file": image_filename,
+                "image_path": str(image_path),
+                "language_code": language_code,
+                "translated_word": translated_word
+            }
+            
+    except Exception as e:
+        conn.rollback()
+        # Try to remove image if it was created
+        if 'image_path' in locals() and image_path.exists():
+            try:
+                os.remove(image_path)
+            except:
+                pass
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def add_multiple_translations_with_image(english_word: str, image_data: str, 
+                                        image_extension: str, translations: dict):
+    """Add a new flashcard with an image and multiple translations at once.
+    
+    This tool:
+    1. Saves the image to the image-library folder
+    2. Creates a new Word_Image entry
+    3. Adds all provided translations
+    
+    Args:
+        english_word: The English word (e.g., 'apple')
+        image_data: Base64 encoded image data
+        image_extension: File extension (e.g., 'png', 'jpg', 'jpeg')
+        translations: Dictionary mapping language codes to translated words
+                     e.g., {"es": "manzana", "fr": "pomme", "vi": "táo"}
+    
+    Returns:
+        Dictionary with success status and details
+    """
+    conn = sqlite3.connect('BilingualTrainer.db')
+    cur = conn.cursor()
+    
+    try:
+        # Check if word already exists
+        cur.execute('SELECT id FROM Word_Image WHERE english_word = ?', (english_word,))
+        if cur.fetchone():
+            return {"error": f"Word '{english_word}' already exists. Use add_flashcard_with_image for single translations or update_word to change image."}
+        
+        # Decode the base64 image
+        image_bytes = base64.b64decode(image_data)
+        
+        # Create image filename
+        image_filename = f"{english_word}.{image_extension}"
+        image_path = Path("image-library") / image_filename
+        
+        # Check if file already exists, add number if needed
+        counter = 0
+        while image_path.exists():
+            image_filename = f"{english_word}_{counter}.{image_extension}"
+            image_path = Path("image-library") / image_filename
+            counter += 1
+        
+        # Save the image file
+        with open(image_path, 'wb') as f:
+            f.write(image_bytes)
+        
+        # Create word entry
+        cur.execute('INSERT INTO Word_Image (english_word, image_file) VALUES (?, ?)',
+                   (english_word, image_filename))
+        word_id = cur.lastrowid
+        
+        # Add all translations
+        translation_count = 0
+        for lang_code, translated_word in translations.items():
+            cur.execute('INSERT INTO Translation (word_id, language_code, translated_word) VALUES (?, ?, ?)',
+                       (word_id, lang_code, translated_word))
+            translation_count += 1
+        
+        conn.commit()
+        return {
+            "success": True,
+            "word_id": word_id,
+            "english_word": english_word,
+            "image_file": image_filename,
+            "image_path": str(image_path),
+            "translations_added": translation_count,
+            "translations": translations
+        }
+            
+    except Exception as e:
+        conn.rollback()
+        # Try to remove image if it was created
+        if 'image_path' in locals() and image_path.exists():
+            try:
+                os.remove(image_path)
+            except:
+                pass
         return {"error": str(e)}
     finally:
         conn.close()
