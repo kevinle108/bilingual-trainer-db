@@ -175,6 +175,9 @@
         </h1>
         <p class="count" id="cardCount">{{ flashcards|length }} words to learn</p>
         <div class="button-group">
+            <a href="/chatbot?lang={{ language }}" class="toggle-btn" style="text-decoration: none; background: rgba(52, 211, 153, 0.3);">
+                🤖 AI Chatbot
+            </a>
             <button class="toggle-btn" onclick="toggleLanguageDirection()" id="toggleBtn">
                 🔄 Show {{ language_name }} First
             </button>

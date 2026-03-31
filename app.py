@@ -54,5 +54,33 @@ def flashcards():
                          language=language,
                          language_name=language_names.get(language, language))
 
+@app.route('/chatbot')
+def chatbot():
+    language = request.args.get('lang', 'es')
+    
+    conn = get_db_connection()
+    flashcards = conn.execute('''
+        SELECT w.id, w.english_word, w.image_file, t.translated_word, t.language_code
+        FROM Word_Image w
+        JOIN Translation t ON w.id = t.word_id
+        WHERE t.language_code = ?
+        ORDER BY w.english_word
+    ''', (language,)).fetchall()
+    conn.close()
+    
+    # Convert to list of dicts for JSON serialization
+    flashcards_list = [dict(card) for card in flashcards]
+    
+    language_names = {
+        'es': 'Spanish',
+        'fr': 'French',
+        'vi': 'Vietnamese'
+    }
+    
+    return render_template('chatbot.html',
+                         flashcards=flashcards_list,
+                         language=language,
+                         language_name=language_names.get(language, language))
+
 if __name__ == '__main__':
     app.run(debug=True)

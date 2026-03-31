@@ -68,21 +68,31 @@
 <body>
     <div class="container">
         <h1>🎴 Bilingual Trainer</h1>
-        <p class="subtitle">Choose a language to start learning</p>
+        <p class="subtitle">Choose a language and learning mode</p>
         
         <div class="language-grid">
             {% for lang in languages %}
-                <a href="/flashcards?lang={{ lang['language_code'] }}" class="language-btn">
-                    {% if lang['language_code'] == 'es' %}
-                        <span class="flag">🇪🇸</span> Spanish
-                    {% elif lang['language_code'] == 'fr' %}
-                        <span class="flag">🇫🇷</span> French
-                    {% elif lang['language_code'] == 'vi' %}
-                        <span class="flag">🇻🇳</span> Vietnamese
-                    {% else %}
-                        {{ language_names.get(lang['language_code'], lang['language_code']) }}
-                    {% endif %}
-                </a>
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.4em;">
+                        {% if lang['language_code'] == 'es' %}
+                            <span class="flag">🇪🇸</span> Spanish
+                        {% elif lang['language_code'] == 'fr' %}
+                            <span class="flag">🇫🇷</span> French
+                        {% elif lang['language_code'] == 'vi' %}
+                            <span class="flag">🇻🇳</span> Vietnamese
+                        {% else %}
+                            {{ language_names.get(lang['language_code'], lang['language_code']) }}
+                        {% endif %}
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <a href="/flashcards?lang={{ lang['language_code'] }}" class="language-btn" style="font-size: 1em; padding: 20px;">
+                            🎴 Flashcards
+                        </a>
+                        <a href="/chatbot?lang={{ lang['language_code'] }}" class="language-btn" style="font-size: 1em; padding: 20px; background: linear-gradient(135deg, #34d399 0%, #059669 100%); box-shadow: 0 5px 15px rgba(52, 211, 153, 0.4);">
+                            🤖 AI Chatbot
+                        </a>
+                    </div>
+                </div>
             {% endfor %}
         </div>
     </div>
