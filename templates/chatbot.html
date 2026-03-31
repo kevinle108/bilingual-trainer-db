@@ -309,12 +309,12 @@
 
         // Initialize chat
         window.addEventListener('DOMContentLoaded', () => {
-            addBotMessage("👋 Hello! I'm your " + languageName + " learning assistant. I'm here to help you learn vocabulary through interactive quizzes and conversation!");
+            addBotMessage("👋 Hello! I'm your " + languageName + " learning assistant. I can help you:<br>• Practice vocabulary with quizzes<br>• Generate new flashcards on any topic<br>• Track your progress<br><br>Try saying: 'Start a quiz' or 'Generate flashcards about animals'");
             setTimeout(() => {
                 showQuickReplies([
                     "Start Quiz",
                     "Practice Mode",
-                    "Show My Progress"
+                    "Generate flashcards"
                 ]);
             }, 1000);
 
@@ -444,47 +444,90 @@
         }
 
         function processUserMessage(message) {
+            const lowerMsg = message.toLowerCase();
+            
+            // Check if answering a quiz question
+            if (currentCard) {
+                checkAnswer(message);
+                return;
+            }
+            
+            // Local command handling (quick commands that don't need AI)
+            if (lowerMsg.includes('next') || lowerMsg.includes('continue') || lowerMsg.includes('fresh')) {
+                askQuestion();
+                return;
+            }
+            if (lowerMsg.includes('quiz') || lowerMsg.includes('start')) {
+                startQuiz();
+                return;
+            }
+            if (lowerMsg.includes('practice')) {
+                startPractice();
+                return;
+            }
+            if (lowerMsg.includes('progress') || lowerMsg.includes('stats')) {
+                showProgress();
+                return;
+            }
+            if (lowerMsg.includes('break')) {
+                addBotMessage("Take your time! I'll be here when you're ready to continue. Just say 'start' when you want to practice more! 😊");
+                return;
+            }
+            if (lowerMsg.includes('help')) {
+                showHelp();
+                return;
+            }
+            
+            // For all other messages (including generation requests), ask the AI
+            handleGeneralConversation(message);
+        }
+
+        async function handleGeneralConversation(message) {
             showTyping();
             
-            setTimeout(() => {
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        currentCard: null,  // Not in quiz mode
+                        mode: gameState.mode,
+                        languageName: languageName,
+                        sessionId: sessionId
+                    })
+                });
+                
                 removeTyping();
                 
-                const lowerMsg = message.toLowerCase();
+                if (!response.ok) {
+                    throw new Error('AI service unavailable');
+                }
                 
-                // Check if answering a quiz question
-                if (currentCard) {
-                    checkAnswer(message);
+                const result = await response.json();
+                
+                if (result.error) {
+                    addBotMessage("⚠️ " + result.error);
+                    return;
                 }
-                // Next question / Continue learning
-                else if (lowerMsg.includes('next') || lowerMsg.includes('continue') || lowerMsg.includes('fresh')) {
-                    askQuestion();
+                
+                // Display the AI's response
+                addBotMessage(result.message);
+                
+                // If flashcards were generated, offer to practice
+                if (result.generated) {
+                    setTimeout(() => {
+                        showQuickReplies(["Start Quiz", "Tell me more", "Generate more cards"]);
+                    }, 1000);
                 }
-                // Start quiz
-                else if (lowerMsg.includes('quiz') || lowerMsg.includes('start')) {
-                    startQuiz();
-                }
-                // Practice mode
-                else if (lowerMsg.includes('practice')) {
-                    startPractice();
-                }
-                // Show progress
-                else if (lowerMsg.includes('progress') || lowerMsg.includes('stats')) {
-                    showProgress();
-                }
-                // Take a break
-                else if (lowerMsg.includes('break')) {
-                    addBotMessage("Take your time! I'll be here when you're ready to continue. Just say 'start' when you want to practice more! 😊");
-                }
-                // Help
-                else if (lowerMsg.includes('help')) {
-                    showHelp();
-                }
-                // Default response
-                else {
-                    addBotMessage("I can help you learn " + languageName + " vocabulary! Would you like to:");
-                    showQuickReplies(["Start Quiz", "Practice Mode", "Show My Progress"]);
-                }
-            }, 1000);
+                
+            } catch (error) {
+                removeTyping();
+                console.error('Error in conversation:', error);
+                addBotMessage("I can help you learn " + languageName + " vocabulary! Try asking me to generate flashcards or start a quiz. 😊");
+            }
         }
 
         function startQuiz() {
@@ -632,10 +675,11 @@
             addBotMessage(`I can help you learn ${languageName} in several ways:<br><br>
                 🎯 <strong>Quiz Mode:</strong> Test your knowledge<br>
                 📚 <strong>Practice Mode:</strong> Learn with hints<br>
+                ✨ <strong>Generate Flashcards:</strong> Create custom vocabulary sets on any topic<br>
                 📊 <strong>Progress:</strong> See your stats<br><br>
-                Just tell me what you'd like to do!`);
+                Just tell me what you'd like to do! Try: "Generate flashcards about food"`);
             
-            showQuickReplies(["Start Quiz", "Practice Mode", "Show My Progress"]);
+            showQuickReplies(["Start Quiz", "Practice Mode", "Generate flashcards"]);
         }
 
         function updateStats() {

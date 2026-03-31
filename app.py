@@ -126,6 +126,12 @@ class FlashcardItem(BaseModel):
     translated: str = Field(description="The translation in the target language")
     hint: Optional[str] = Field(default="", description="Optional learning hint or context")
 
+class GenerationIntent(BaseModel):
+    """Model for detecting flashcard generation intent"""
+    wants_generation: bool = Field(description="Whether the user wants to generate new flashcards")
+    theme: Optional[str] = Field(default="", description="The topic/theme for flashcards (if requested)")
+    count: Optional[int] = Field(default=10, description="Number of cards to generate (if specified)")
+
 class QuizEvaluation(BaseModel):
     """Model for quiz answer evaluation"""
     correct: bool = Field(description="Whether the student's answer is correct")
@@ -238,10 +244,77 @@ If incorrect in practice mode, give a helpful hint without revealing the full an
             return jsonify(result)
         
         else:
-            # General conversation (non-quiz)
+            # General conversation (non-quiz) - check for generation intent first
+            lower_message = user_message.lower()
+            
+            # Check if user wants to generate flashcards
+            if any(keyword in lower_message for keyword in ['generate', 'create cards', 'make flashcards', 'new cards', 'add cards']):
+                # Use AI to detect generation intent and extract details
+                intent_prompt = ChatPromptTemplate.from_messages([
+                    SystemMessage(content=f"""Analyze if the user wants to generate new flashcards. Extract:
+1. wants_generation: true/false
+2. theme: the topic (if mentioned, e.g., "animals", "food")  
+3. count: number of cards (if mentioned, default 10)
+
+Respond in JSON format exactly like this:
+{{"wants_generation": true, "theme": "animals", "count": 10}}"""),
+                    HumanMessage(content=user_message)
+                ])
+                
+                try:
+                    intent_chain = intent_prompt | llm
+                    intent_response = intent_chain.invoke({})
+                    
+                    # Parse intent
+                    intent_content = intent_response.content
+                    if '```json' in intent_content:
+                        intent_content = intent_content.split('```json')[1].split('```')[0].strip()
+                    elif '```' in intent_content:
+                        intent_content = intent_content.split('```')[1].split('```')[0].strip()
+                    
+                    intent_data = json.loads(intent_content)
+                    
+                    if intent_data.get('wants_generation'):
+                        theme = intent_data.get('theme', 'general vocabulary')
+                        count = min(max(intent_data.get('count', 10), 5), 15)  # Limit 5-15 for chatbot
+                        
+                        # Generate flashcards
+                        session.add_message("user", user_message)
+                        session.add_message("assistant", f"Generating {count} {language_name} flashcards about {theme}...")
+                        
+                        # Map language name to code
+                        lang_code_map = {
+                            'Vietnamese': 'vi',
+                            'Spanish': 'es',
+                            'French': 'fr'
+                        }
+                        lang_code = lang_code_map.get(language_name, 'vi')
+                        
+                        result = generate_flashcard_set(theme, lang_code, count, fetch_images=False)
+                        
+                        if result['success']:
+                            response_msg = f"✨ Great! I've generated {result['count']} new {language_name} flashcards about {theme}! They're now available in your flashcard deck. Would you like to practice them with a quiz?"
+                            session.add_message("assistant", response_msg)
+                            return jsonify({
+                                'message': response_msg,
+                                'generated': True,
+                                'count': result['count']
+                            })
+                        else:
+                            error_msg = f"Sorry, I had trouble generating those flashcards. {result.get('error', '')} Try being more specific about the topic!"
+                            session.add_message("assistant", error_msg)
+                            return jsonify({'message': error_msg})
+                
+                except Exception as e:
+                    print(f"Error detecting generation intent: {e}")
+                    # Fall through to normal conversation
+            
+            # Normal conversation
             conversation_prompt = ChatPromptTemplate.from_messages([
                 SystemMessage(content=f"""You are a friendly and encouraging language learning tutor for {language_name}. 
 You help students learn vocabulary through conversation, encouragement, and guidance.
+
+You can also help generate new flashcards! If the user asks, you can create custom vocabulary sets on any topic.
 
 Keep responses concise (2-3 sentences max), friendly, and motivating. Use emojis occasionally."""),
                 MessagesPlaceholder(variable_name="chat_history"),
@@ -363,29 +436,11 @@ def download_and_save_image(url: str, word: str) -> Optional[str]:
         print(f"✗ Error downloading image for '{word}': {e}")
         return None
 
-@app.route('/api/generate', methods=['POST'])
-def generate_flashcards():
-    """Generate flashcards using AI"""
-    if not llm:
-        return jsonify({
-            'success': False, 
-            'error': 'AI service not configured. Please set GITHUB_TOKEN environment variable.'
-        }), 500
-    
-    data = request.json
-    theme = data.get('theme', '').strip()
-    language_code = data.get('language', 'vi')
-    count = int(data.get('count', 10))
-    description = data.get('description', '').strip()
-    fetch_images = data.get('fetchImages', False)
-    
-    # Validate inputs
-    if not theme:
-        return jsonify({'success': False, 'error': 'Theme is required'}), 400
-    
-    if count < 3 or count > 30:
-        return jsonify({'success': False, 'error': 'Count must be between 3 and 30'}), 400
-    
+def generate_flashcard_set(theme: str, language_code: str, count: int = 10, fetch_images: bool = False) -> dict:
+    """
+    Internal function to generate a set of flashcards
+    Returns dict with success status and details
+    """
     language_names = {
         'es': 'Spanish',
         'fr': 'French',
@@ -405,30 +460,21 @@ Requirements:
 - Choose practical, useful vocabulary that a learner would encounter
 - Include a mix of nouns, verbs, and common phrases when appropriate
 - Words should be appropriate for beginners to intermediate learners
-- Optionally include a brief learning hint or context clue"""
-
-        if description:
-            system_prompt += f"\n- Additional requirements: {description}"
-        
-        system_prompt += f"""
 
 Respond with a JSON array containing exactly {count} flashcard objects.
 Each object must have:
 - "english": the English word or phrase
 - "translated": the {language_name} translation
-- "hint": (optional) a brief learning tip or mnemonic
 
 Example format:
 [
-  {{"english": "hello", "translated": "xin chào", "hint": "Common greeting"}},
-  {{"english": "thank you", "translated": "cảm ơn", "hint": "Shows gratitude"}}
+  {{"english": "hello", "translated": "xin chào"}},
+  {{"english": "thank you", "translated": "cảm ơn"}}
 ]
 
 IMPORTANT: Return ONLY the JSON array, no other text."""
 
-        # Create the LangChain prompt and parser
-        parser = JsonOutputParser()
-        
+        # Create the LangChain prompt
         generation_prompt = ChatPromptTemplate.from_messages([
             SystemMessage(content=system_prompt),
             HumanMessage(content=f"Generate {count} {language_name} vocabulary flashcards about: {theme}")
@@ -452,7 +498,7 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
         if not isinstance(flashcards, list):
             raise ValueError("AI did not return a list of flashcards")
         
-        if len(flashcards) < count - 2:  # Allow some tolerance
+        if len(flashcards) < max(3, count - 2):  # Allow some tolerance
             raise ValueError(f"AI only generated {len(flashcards)} cards instead of {count}")
         
         # Insert into database
@@ -514,19 +560,49 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
         conn.commit()
         conn.close()
         
-        return jsonify({
+        return {
             'success': True,
             'count': inserted_count,
             'theme': theme,
             'language': language_code
-        })
+        }
         
     except Exception as e:
         print(f"Error generating flashcards: {e}")
-        return jsonify({
+        return {
             'success': False,
-            'error': f'Failed to generate flashcards: {str(e)}'
+            'error': str(e)
+        }
+
+@app.route('/api/generate', methods=['POST'])
+def generate_flashcards_api():
+    """Generate flashcards using AI (API endpoint for form submission)"""
+    if not llm:
+        return jsonify({
+            'success': False, 
+            'error': 'AI service not configured. Please set GITHUB_TOKEN environment variable.'
         }), 500
+    
+    data = request.json
+    theme = data.get('theme', '').strip()
+    language_code = data.get('language', 'vi')
+    count = int(data.get('count', 10))
+    fetch_images = data.get('fetchImages', False)
+    
+    # Validate inputs
+    if not theme:
+        return jsonify({'success': False, 'error': 'Theme is required'}), 400
+    
+    if count < 3 or count > 30:
+        return jsonify({'success': False, 'error': 'Count must be between 3 and 30'}), 400
+    
+    # Use the helper function
+    result = generate_flashcard_set(theme, language_code, count, fetch_images)
+    
+    if result['success']:
+        return jsonify(result)
+    else:
+        return jsonify(result), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
