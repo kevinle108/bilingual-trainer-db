@@ -294,7 +294,11 @@
         const languageName = '{{ language_name }}';
         let flashcards = {{ flashcards|tojson }};
         let currentCard = null;
-        let conversationHistory = []; // Track conversation for AI context
+        let conversationHistory = []; // Track conversation for AI context (legacy, now using server-side sessions)
+        
+        // Generate unique session ID for this chat session
+        const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(7);
+        
         let gameState = {
             wordsLearned: new Set(),
             correctAnswers: 0,
@@ -338,14 +342,6 @@
             messageDiv.innerHTML = html;
             messagesDiv.appendChild(messageDiv);
             
-            // Track in conversation history (for non-quiz messages)
-            if (!currentCard || !text.includes('What is the English word')) {
-                conversationHistory.push({
-                    role: "assistant",
-                    content: text.replace(/<[^>]*>/g, '') // Remove HTML tags for history
-                });
-            }
-            
             if (showReplies) {
                 setTimeout(() => showQuickReplies(showReplies), 500);
             }
@@ -364,9 +360,6 @@
             `;
             
             messagesDiv.appendChild(messageDiv);
-            
-            // Track in conversation history (will be added in processUserMessage or checkAnswer)
-            
             scrollToBottom();
         }
 
@@ -518,22 +511,11 @@
             const question = `What is the English word for <span class="word-highlight">${currentCard.translated_word}</span>?`;
             
             addBotMessage(question, imageUrl);
-            
-            // Add to conversation history
-            conversationHistory.push({
-                role: "assistant",
-                content: `Quiz question: What is the English word for ${currentCard.translated_word}?`
-            });
+            // Note: Conversation history is now managed by LangChain on the server
         }
 
         async function checkAnswer(answer) {
             gameState.totalAttempts++;
-            
-            // Add user's answer to conversation history
-            conversationHistory.push({
-                role: "user",
-                content: answer
-            });
             
             showTyping();
             
@@ -549,7 +531,7 @@
                         currentCard: currentCard,
                         mode: gameState.mode,
                         languageName: languageName,
-                        history: conversationHistory.slice(-10) // Last 10 messages for context
+                        sessionId: sessionId // LangChain manages conversation history on server
                     })
                 });
                 
@@ -567,11 +549,7 @@
                     return;
                 }
                 
-                // Add AI response to conversation history
-                conversationHistory.push({
-                    role: "assistant",
-                    content: result.message
-                });
+                // LangChain manages conversation history on the server
                 
                 if (result.correct) {
                     // Correct answer!
