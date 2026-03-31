@@ -294,6 +294,7 @@
         const languageName = '{{ language_name }}';
         let flashcards = {{ flashcards|tojson }};
         let currentCard = null;
+        let conversationHistory = []; // Track conversation for AI context
         let gameState = {
             wordsLearned: new Set(),
             correctAnswers: 0,
@@ -337,6 +338,14 @@
             messageDiv.innerHTML = html;
             messagesDiv.appendChild(messageDiv);
             
+            // Track in conversation history (for non-quiz messages)
+            if (!currentCard || !text.includes('What is the English word')) {
+                conversationHistory.push({
+                    role: "assistant",
+                    content: text.replace(/<[^>]*>/g, '') // Remove HTML tags for history
+                });
+            }
+            
             if (showReplies) {
                 setTimeout(() => showQuickReplies(showReplies), 500);
             }
@@ -355,6 +364,9 @@
             `;
             
             messagesDiv.appendChild(messageDiv);
+            
+            // Track in conversation history (will be added in processUserMessage or checkAnswer)
+            
             scrollToBottom();
         }
 
@@ -506,54 +518,116 @@
             const question = `What is the English word for <span class="word-highlight">${currentCard.translated_word}</span>?`;
             
             addBotMessage(question, imageUrl);
+            
+            // Add to conversation history
+            conversationHistory.push({
+                role: "assistant",
+                content: `Quiz question: What is the English word for ${currentCard.translated_word}?`
+            });
         }
 
-        function checkAnswer(answer) {
-            const correct = currentCard.english_word.toLowerCase();
-            const userAnswer = answer.toLowerCase().trim();
-            
+        async function checkAnswer(answer) {
             gameState.totalAttempts++;
             
-            if (userAnswer === correct) {
-                // Correct answer!
-                gameState.correctAnswers++;
-                gameState.streak++;
-                gameState.wordsLearned.add(currentCard.english_word);
-                updateStats();
+            // Add user's answer to conversation history
+            conversationHistory.push({
+                role: "user",
+                content: answer
+            });
+            
+            showTyping();
+            
+            try {
+                // Call AI API to check answer
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: answer,
+                        currentCard: currentCard,
+                        mode: gameState.mode,
+                        languageName: languageName,
+                        history: conversationHistory.slice(-10) // Last 10 messages for context
+                    })
+                });
                 
-                const encouragements = [
-                    "🎉 Excellent! That's correct!",
-                    "✨ Perfect! You got it!",
-                    "🌟 Amazing! Well done!",
-                    "🎊 Fantastic! You're doing great!",
-                    "👏 Brilliant! Keep it up!"
-                ];
-                const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+                removeTyping();
                 
-                addBotMessage(msg + ` <span class="word-highlight">${currentCard.translated_word}</span> = <span class="word-highlight">${currentCard.english_word}</span>`);
-                
-                currentCard = null;
-                
-                setTimeout(() => {
-                    showQuickReplies(["Next Question", "Take a Break", "Show Progress"]);
-                }, 1000);
-            }
-            else {
-                // Wrong answer
-                gameState.streak = 0;
-                updateStats();
-                
-                if (gameState.mode === 'practice') {
-                    // Give a hint in practice mode
-                    const hint = currentCard.english_word.substring(0, 2) + "...";
-                    addBotMessage(`Not quite! Here's a hint: it starts with <span class="word-highlight">${hint}</span> Try again!`);
+                if (!response.ok) {
+                    throw new Error('AI service unavailable');
                 }
-                else {
-                    addBotMessage(`Not quite! The correct answer is <span class="word-highlight">${currentCard.english_word}</span>. Let's try another one!`);
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    addBotMessage("⚠️ " + result.error);
+                    currentCard = null;
+                    return;
+                }
+                
+                // Add AI response to conversation history
+                conversationHistory.push({
+                    role: "assistant",
+                    content: result.message
+                });
+                
+                if (result.correct) {
+                    // Correct answer!
+                    gameState.correctAnswers++;
+                    gameState.streak++;
+                    gameState.wordsLearned.add(currentCard.english_word);
+                    updateStats();
+                    
+                    addBotMessage(result.message);
                     currentCard = null;
                     
                     setTimeout(() => {
-                        showQuickReplies(["Next Question", "Switch to Practice Mode", "Take a Break"]);
+                        showQuickReplies(["Next Question", "Take a Break", "Show Progress"]);
+                    }, 1000);
+                } else {
+                    // Wrong answer
+                    gameState.streak = 0;
+                    updateStats();
+                    
+                    addBotMessage(result.message);
+                    
+                    // In quiz mode, move to next question. In practice mode, let them try again.
+                    if (gameState.mode === 'quiz') {
+                        currentCard = null;
+                        setTimeout(() => {
+                            showQuickReplies(["Next Question", "Switch to Practice Mode", "Take a Break"]);
+                        }, 1000);
+                    }
+                    // In practice mode, keep currentCard so they can try again
+                }
+                
+            } catch (error) {
+                removeTyping();
+                console.error('Error checking answer:', error);
+                
+                // Fallback to simple string matching if AI fails
+                const correct = currentCard.english_word.toLowerCase();
+                const userAnswer = answer.toLowerCase().trim();
+                
+                if (userAnswer === correct) {
+                    gameState.correctAnswers++;
+                    gameState.streak++;
+                    gameState.wordsLearned.add(currentCard.english_word);
+                    updateStats();
+                    addBotMessage(`✨ Correct! <span class="word-highlight">${currentCard.translated_word}</span> = <span class="word-highlight">${currentCard.english_word}</span>`);
+                    currentCard = null;
+                    setTimeout(() => {
+                        showQuickReplies(["Next Question", "Take a Break", "Show Progress"]);
+                    }, 1000);
+                } else {
+                    gameState.streak = 0;
+                    updateStats();
+                    addBotMessage(`Not quite! The correct answer is <span class="word-highlight">${currentCard.english_word}</span>. (Note: AI checking is unavailable)`);
+                    currentCard = null;
+                    setTimeout(() => {
+                        showQuickReplies(["Next Question", "Take a Break"]);
                     }, 1000);
                 }
             }
