@@ -145,6 +145,16 @@
             color: #333;
             font-size: 1.5em;
         }
+        .flashcard-front .translation-display {
+            display: none;
+            color: #667eea;
+            font-size: 1.3em;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .edit-mode .flashcard-front .translation-display {
+            display: block;
+        }
         .flashcard-back .word-display {
             color: white;
             font-size: 2.2em;
@@ -247,6 +257,7 @@
                          class="flashcard-image"
                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
                     <div class="word-display front-word">{{ card['english_word'] }}</div>
+                    <div class="translation-display front-translation">{{ card['translated_word'] }}</div>
                     <div class="flip-hint">Click to reveal</div>
                 </div>
                 <div class="flashcard-back">
@@ -314,14 +325,17 @@
                 const translatedWord = card.dataset.translation;
                 const frontWord = card.querySelector('.front-word');
                 const backWord = card.querySelector('.back-word');
+                const frontTranslation = card.querySelector('.front-translation');
                 
                 if (isReversed) {
                     frontWord.textContent = translatedWord;
                     backWord.textContent = englishWord;
+                    frontTranslation.textContent = englishWord;
                     toggleBtn.innerHTML = '🔄 Show English First';
                 } else {
                     frontWord.textContent = englishWord;
                     backWord.textContent = translatedWord;
+                    frontTranslation.textContent = translatedWord;
                     toggleBtn.innerHTML = `🔄 Show ${languageName} First`;
                 }
             });
