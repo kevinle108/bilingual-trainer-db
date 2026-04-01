@@ -39,4 +39,11 @@ Eliminated:
 
 Conclusion:
 black-forest-labs/FLUX-2-klein-9b -> $0.08
-prompt = "a cute picture of a computer mouse with no text, suitable for a kid's flashcard"
+prompt = "a cute picture of [word] with no text, suitable for a kid's flashcard"
+
+✅ INTEGRATED INTO APP:
+- Model: black-forest-labs/FLUX-2-klein-9b ($0.08/100 images)
+- Prompt format: "a cute picture of [word] with no text, suitable for a kid's flashcard"
+- Primary image source when generating flashcards with images enabled
+- Falls back to Wikimedia Commons if ImageRouter fails
+- API key loaded from .env: IMAGE_ROUTER_API_KEY

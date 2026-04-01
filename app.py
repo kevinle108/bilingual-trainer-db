@@ -24,6 +24,14 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 API_ENDPOINT = os.getenv("API_ENDPOINT", "https://models.github.ai/inference")
 MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-4o-mini")
 
+# ImageRouter API configuration
+# Using FLUX-2-klein-9b model for high-quality kid-friendly flashcard images
+# Cost: $0.08 per 100 images
+# Prompt format: "a cute picture of [word] with no text, suitable for a kid's flashcard"
+IMAGE_ROUTER_API_KEY = os.getenv("IMAGE_ROUTER_API_KEY")
+IMAGE_ROUTER_API_URL = "https://api.imagerouter.io/v1/openai/images/generations"
+IMAGE_ROUTER_MODEL = "black-forest-labs/FLUX-2-klein-9b"  # $0.08/100 images - high quality
+
 # Initialize LangChain ChatOpenAI
 llm = ChatOpenAI(
     model=MODEL_NAME,
@@ -290,7 +298,7 @@ Respond in JSON format exactly like this:
                         }
                         lang_code = lang_code_map.get(language_name, 'vi')
                         
-                        result = generate_flashcard_set(theme, lang_code, count, fetch_images=False)
+                        result = generate_flashcard_set(theme, lang_code, count, fetch_images=True)
                         
                         if result['success']:
                             response_msg = f"✨ Great! I've generated {result['count']} new {language_name} flashcards about {theme}! They're now available in your flashcard deck. Would you like to practice them with a quiz?"
@@ -360,6 +368,93 @@ Keep responses concise (2-3 sentences max), friendly, and motivating. Use emojis
             })
 
 # Helper functions for flashcard generation
+def generate_image_with_imagerouter(word: str) -> Optional[str]:
+    """Generate an image using ImageRouter.io AI image generation"""
+    if not IMAGE_ROUTER_API_KEY:
+        print(f"⚠ ImageRouter API key not configured, skipping AI generation for '{word}'")
+        print(f"   Please set IMAGE_ROUTER_API_KEY in your .env file")
+        return None
+    
+    try:
+        # Create kid-friendly prompt
+        prompt = f"a cute picture of {word} with no text, suitable for a kid's flashcard"
+        
+        print(f"🎨 Generating AI image for '{word}'...")
+        print(f"   Prompt: {prompt}")
+        print(f"   Model: {IMAGE_ROUTER_MODEL}")
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {IMAGE_ROUTER_API_KEY}"
+        }
+        
+        payload = {
+            "prompt": prompt,
+            "model": IMAGE_ROUTER_MODEL,
+            "size": "auto",
+            "n": 1
+        }
+        
+        print(f"🎨 Generating AI image for '{word}' using {IMAGE_ROUTER_MODEL}...")
+        
+        response = requests.post(
+            IMAGE_ROUTER_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+        
+        if response.status_code != 200:
+            error_msg = response.json().get('error', {}).get('message', 'Unknown error')
+            print(f"✗ ImageRouter API Error ({response.status_code}): {error_msg}")
+            return None
+        
+        result = response.json()
+        
+        # Get image URL from response
+        if 'data' not in result or len(result['data']) == 0:
+            print(f"✗ No image data in ImageRouter response for '{word}'")
+            return None
+        
+        image_url = result['data'][0].get('url') or result['data'][0].get('b64_json')
+        
+        if not image_url:
+            print(f"✗ No image URL in ImageRouter response for '{word}'")
+            return None
+        
+        # Download and save the generated image
+        if image_url.startswith('http'):
+            downloaded = download_and_save_image(image_url, word, source="imagerouter")
+            if downloaded:
+                print(f"✓ Successfully generated AI image for '{word}': {downloaded}")
+                return downloaded
+        else:
+            # Handle base64 encoded image
+            import base64
+            image_data = base64.b64decode(image_url)
+            
+            # Create safe filename
+            safe_word = "".join(c for c in word if c.isalnum() or c in (' ', '-', '_')).strip()
+            safe_word = safe_word.replace(' ', '_').lower()
+            filename = f"{safe_word}_{int(time.time())}_ai.png"
+            
+            # Save to image-library
+            image_path = os.path.join('image-library', filename)
+            with open(image_path, 'wb') as f:
+                f.write(image_data)
+            
+            print(f"✓ Successfully generated AI image for '{word}': {filename}")
+            return filename
+        
+        return None
+        
+    except requests.exceptions.Timeout:
+        print(f"✗ Timeout generating AI image for '{word}'")
+        return None
+    except Exception as e:
+        print(f"✗ Error generating AI image for '{word}': {e}")
+        return None
+
 def fetch_wikimedia_image(word: str) -> Optional[str]:
     """Fetch an image URL from Wikimedia Commons for a given word"""
     try:
@@ -400,7 +495,7 @@ def fetch_wikimedia_image(word: str) -> Optional[str]:
         print(f"Error fetching image for '{word}': {e}")
         return None
 
-def download_and_save_image(url: str, word: str) -> Optional[str]:
+def download_and_save_image(url: str, word: str, source: str = "wikimedia") -> Optional[str]:
     """Download an image and save it to the image-library folder"""
     try:
         headers = {
@@ -420,7 +515,10 @@ def download_and_save_image(url: str, word: str) -> Optional[str]:
         # Create safe filename
         safe_word = "".join(c for c in word if c.isalnum() or c in (' ', '-', '_')).strip()
         safe_word = safe_word.replace(' ', '_').lower()
-        filename = f"{safe_word}_{int(time.time())}{ext}"
+        
+        # Add source suffix for tracking
+        source_suffix = "_ai" if source == "imagerouter" else ""
+        filename = f"{safe_word}_{int(time.time())}{source_suffix}{ext}"
         
         # Save to image-library
         image_path = os.path.join('image-library', filename)
@@ -439,7 +537,16 @@ def download_and_save_image(url: str, word: str) -> Optional[str]:
 def generate_flashcard_set(theme: str, language_code: str, count: int = 10, fetch_images: bool = False) -> dict:
     """
     Internal function to generate a set of flashcards
-    Returns dict with success status and details
+    
+    Args:
+        theme: Topic/theme for the flashcards
+        language_code: Language code (es, fr, vi)
+        count: Number of flashcards to generate (default: 10)
+        fetch_images: Whether to fetch/generate images for flashcards (default: False)
+                      When True, uses ImageRouter AI generation first, falls back to Wikimedia
+    
+    Returns:
+        dict with success status and details
     """
     language_names = {
         'es': 'Spanish',
@@ -513,13 +620,22 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
             if not english_word or not translated_word:
                 continue
             
-            # Try to fetch image if requested (default to empty string if none found)
+            # Try to fetch image if requested
             image_file = ""
             if fetch_images:
-                fetched_image = fetch_wikimedia_image(english_word)
+                # Try ImageRouter AI generation first (better quality, kid-friendly)
+                print(f"Generating image for '{english_word}'...")
+                fetched_image = generate_image_with_imagerouter(english_word)
+                
+                # Fall back to Wikimedia if ImageRouter fails
+                if not fetched_image:
+                    print(f"  Falling back to Wikimedia for '{english_word}'...")
+                    fetched_image = fetch_wikimedia_image(english_word)
+                
                 if fetched_image:
                     image_file = fetched_image
-                time.sleep(0.5)  # Be polite to Wikimedia API
+                
+                time.sleep(2)  # Delay between requests to be respectful to APIs
             
             # Check if word already exists
             existing = cur.execute(
@@ -605,4 +721,14 @@ def generate_flashcards_api():
         return jsonify(result), 500
 
 if __name__ == '__main__':
+    print("="*60)
+    print("🚀 Bilingual Trainer App Starting")
+    print("="*60)
+    print(f"GitHub Token: {'✓ Configured' if GITHUB_TOKEN else '✗ Missing'}")
+    print(f"ImageRouter API Key: {'✓ Configured' if IMAGE_ROUTER_API_KEY else '✗ Missing (images will not be generated)'}")
+    if IMAGE_ROUTER_API_KEY:
+        print(f"   Model: {IMAGE_ROUTER_MODEL}")
+        print(f"   Cost: $0.08 per 100 images")
+    print("="*60)
+    print()
     app.run(debug=True)
