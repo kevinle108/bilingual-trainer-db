@@ -720,6 +720,38 @@ def generate_flashcards_api():
     else:
         return jsonify(result), 500
 
+@app.route('/api/flashcard/<int:card_id>', methods=['DELETE'])
+def delete_flashcard(card_id):
+    """Delete a flashcard (word and all its translations)"""
+    try:
+        conn = get_db_connection()
+        
+        # Check if the word exists
+        word = conn.execute('SELECT english_word FROM Word_Image WHERE id = ?', (card_id,)).fetchone()
+        
+        if not word:
+            conn.close()
+            return jsonify({'error': 'Flashcard not found'}), 404
+        
+        # Delete translations first (foreign key constraint)
+        conn.execute('DELETE FROM Translation WHERE word_id = ?', (card_id,))
+        
+        # Delete the word
+        conn.execute('DELETE FROM Word_Image WHERE id = ?', (card_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully deleted "{word["english_word"]}"'
+        })
+        
+    except sqlite3.Error as e:
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print("="*60)
     print("🚀 Bilingual Trainer App Starting")
