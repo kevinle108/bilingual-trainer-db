@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, send_from_directory, jsonify
+from werkzeug.utils import secure_filename
 import sqlite3
 import os
 import json
@@ -808,6 +809,77 @@ def update_flashcard(card_id):
         
     except sqlite3.Error as e:
         return jsonify({'error': f'Database error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+@app.route('/api/flashcard/<int:card_id>/image', methods=['POST'])
+def update_flashcard_image(card_id):
+    """Update a flashcard's image"""
+    try:
+        # Check if image file is in request
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        
+        # Check if file was actually selected
+        if file.filename == '' or not file.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Validate file extension
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        if '.' not in file.filename:
+            return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif, webp'}), 400
+            
+        file_ext = file.filename.rsplit('.', 1)[1].lower()
+        
+        if file_ext not in allowed_extensions:
+            return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif, webp'}), 400
+        
+        conn = get_db_connection()
+        
+        # Check if the word exists and get current image
+        word = conn.execute('SELECT english_word, image_file FROM Word_Image WHERE id = ?', (card_id,)).fetchone()
+        
+        if not word:
+            conn.close()
+            return jsonify({'error': 'Flashcard not found'}), 404
+        
+        # Generate new filename using card_id and original extension
+        new_filename = f"card_{card_id}_{int(time.time())}.{file_ext}"
+        
+        # Ensure image-library directory exists
+        image_dir = os.path.join(os.path.dirname(__file__), 'image-library')
+        os.makedirs(image_dir, exist_ok=True)
+        
+        # Save the new image
+        file_path = os.path.join(image_dir, new_filename)
+        file.save(file_path)
+        
+        # Update database with new image filename
+        conn.execute('UPDATE Word_Image SET image_file = ? WHERE id = ?', 
+                    (new_filename, card_id))
+        conn.commit()
+        
+        # Optionally delete old image file if it exists and is not the default
+        old_image = word['image_file']
+        if old_image and not old_image.startswith('default') and old_image != new_filename:
+            old_path = os.path.join(image_dir, old_image)
+            try:
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            except Exception as e:
+                # Log but don't fail if old image can't be deleted
+                print(f"Warning: Could not delete old image {old_image}: {e}")
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'filename': new_filename,
+            'message': 'Successfully updated image'
+        })
+        
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
