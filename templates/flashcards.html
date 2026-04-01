@@ -177,12 +177,15 @@
             height: 35px;
             font-size: 1.2em;
             cursor: pointer;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
             z-index: 10;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .edit-mode .delete-btn {
+            display: flex;
         }
         .delete-btn:hover {
             background: rgba(220, 38, 38, 1);
@@ -191,6 +194,13 @@
         }
         .delete-btn:active {
             transform: scale(0.95);
+        }
+        .edit-mode-btn {
+            background: rgba(251, 191, 36, 0.3);
+        }
+        .edit-mode-btn.active {
+            background: rgba(251, 191, 36, 0.5);
+            font-weight: bold;
         }
     </style>
 </head>
@@ -205,6 +215,9 @@
             <a href="/chatbot?lang={{ language }}" class="toggle-btn" style="text-decoration: none; background: rgba(52, 211, 153, 0.3);">
                 🤖 AI Chatbot
             </a>
+            <button class="toggle-btn edit-mode-btn" onclick="toggleEditMode()" id="editModeBtn">
+                ✏️ Edit Mode
+            </button>
             <button class="toggle-btn" onclick="toggleLanguageDirection()" id="toggleBtn">
                 🔄 Show {{ language_name }} First
             </button>
@@ -247,14 +260,20 @@
     
     <script>
         let isReversed = false;
+        let isEditMode = false;
         const languageName = '{{ language_name }}';
         const totalCards = {{ flashcards|length }};
         
-        // Load saved preference from localStorage
+        // Load saved preferences from localStorage
         window.addEventListener('DOMContentLoaded', () => {
             const savedMode = localStorage.getItem('flashcardMode');
             if (savedMode === 'reversed') {
                 toggleLanguageDirection();
+            }
+            
+            const savedEditMode = localStorage.getItem('editMode');
+            if (savedEditMode === 'true') {
+                toggleEditMode();
             }
             
             // Add event listener for card limit input
@@ -309,6 +328,25 @@
             
             // Save preference to localStorage
             localStorage.setItem('flashcardMode', isReversed ? 'reversed' : 'normal');
+        }
+        
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const grid = document.querySelector('.flashcards-grid');
+            const editModeBtn = document.getElementById('editModeBtn');
+            
+            if (isEditMode) {
+                grid.classList.add('edit-mode');
+                editModeBtn.classList.add('active');
+                editModeBtn.innerHTML = '✅ Edit Mode ON';
+            } else {
+                grid.classList.remove('edit-mode');
+                editModeBtn.classList.remove('active');
+                editModeBtn.innerHTML = '✏️ Edit Mode';
+            }
+            
+            // Save preference to localStorage
+            localStorage.setItem('editMode', isEditMode);
         }
         
         function shuffleCards() {
