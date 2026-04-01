@@ -47,3 +47,6 @@ prompt = "a cute picture of [word] with no text, suitable for a kid's flashcard"
 - Primary image source when generating flashcards with images enabled
 - Falls back to Wikimedia Commons if ImageRouter fails
 - API key loaded from .env: IMAGE_ROUTER_API_KEY
+
+Better Prompt:
+I need A cute kawaii-style cartoon illustration of a zebra. Use soft rounded shapes, simple details, bright flat colors, clean outlines, and a friendly child‑safe appearance. Plain white background with a small soft shadow under the character.
