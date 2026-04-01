@@ -236,6 +236,34 @@
             outline: 2px solid rgba(102, 126, 234, 0.5);
             outline-offset: 2px;
         }
+        .paste-instruction {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(102, 126, 234, 0.95);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 6;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: opacity 0.2s;
+        }
+        .paste-instruction.show {
+            opacity: 1;
+        }
+        .paste-instruction kbd {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
         .flashcard-back .word-display {
             color: white;
             font-size: 2.2em;
@@ -341,8 +369,9 @@
                              alt="{{ card['english_word'] }}" 
                              class="flashcard-image"
                              data-card-id="{{ card['id'] }}"
-                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2550%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
                         <div class="change-image-btn">📋 Click & Paste Image</div>
+                        <div class="paste-instruction">Press <kbd>Ctrl+V</kbd> to paste</div>
                     </div>
                     <div class="word-display front-word" 
                          contenteditable="false" 
@@ -462,6 +491,7 @@
                 allImageContainers.forEach(container => {
                     container.addEventListener('click', handleImageContainerClick);
                     container.addEventListener('paste', handleImagePaste);
+                    container.addEventListener('blur', handleImageContainerBlur);
                 });
             } else {
                 grid.classList.remove('edit-mode');
@@ -475,6 +505,12 @@
                 allImageContainers.forEach(container => {
                     container.removeEventListener('click', handleImageContainerClick);
                     container.removeEventListener('paste', handleImagePaste);
+                    container.removeEventListener('blur', handleImageContainerBlur);
+                    // Hide any visible instructions
+                    const instruction = container.querySelector('.paste-instruction');
+                    if (instruction) {
+                        instruction.classList.remove('show');
+                    }
                 });
             }
             
@@ -612,6 +648,20 @@
             event.stopPropagation(); // Prevent card flip
             const container = event.currentTarget;
             container.focus(); // Focus to enable paste
+            
+            // Show paste instruction
+            const instruction = container.querySelector('.paste-instruction');
+            if (instruction) {
+                instruction.classList.add('show');
+            }
+        }
+        
+        function handleImageContainerBlur(event) {
+            const container = event.currentTarget;
+            const instruction = container.querySelector('.paste-instruction');
+            if (instruction) {
+                instruction.classList.remove('show');
+            }
         }
         
         async function handleImagePaste(event) {
@@ -650,6 +700,13 @@
             
             const container = event.currentTarget;
             const cardId = container.dataset.cardId;
+            
+            // Hide instruction on successful paste
+            const instruction = container.querySelector('.paste-instruction');
+            if (instruction) {
+                instruction.classList.remove('show');
+            }
+            
             await uploadImageFile(imageFile, cardId);
         }
         
