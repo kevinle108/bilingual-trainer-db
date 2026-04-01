@@ -225,8 +225,16 @@
         .change-image-btn:active {
             transform: translate(-50%, -50%) scale(0.95);
         }
-        .image-upload-input {
-            display: none;
+        .change-image-btn {
+            white-space: nowrap;
+        }
+        .edit-mode .flashcard-image-container {
+            cursor: pointer;
+            position: relative;
+        }
+        .edit-mode .flashcard-image-container:focus {
+            outline: 2px solid rgba(102, 126, 234, 0.5);
+            outline-offset: 2px;
         }
         .flashcard-back .word-display {
             color: white;
@@ -326,18 +334,15 @@
                 <div class="flashcard-front">
                     <button class="delete-btn" onclick="event.stopPropagation(); deleteCard(this, {{ card['id'] }})" title="Delete this card">🗑️</button>
                     <div class="save-indicator">Saved ✓</div>
-                    <div class="flashcard-image-container">
+                    <div class="flashcard-image-container" 
+                         tabindex="0"
+                         data-card-id="{{ card['id'] }}">
                         <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
                              alt="{{ card['english_word'] }}" 
                              class="flashcard-image"
                              data-card-id="{{ card['id'] }}"
                              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-                        <button class="change-image-btn" onclick="event.stopPropagation(); triggerImageUpload({{ card['id'] }})">Change Image</button>
-                        <input type="file" 
-                               id="image-upload-{{ card['id'] }}" 
-                               class="image-upload-input" 
-                               accept="image/*" 
-                               onchange="uploadNewImage(this, {{ card['id'] }})">
+                        <div class="change-image-btn">📋 Click & Paste Image</div>
                     </div>
                     <div class="word-display front-word" 
                          contenteditable="false" 
@@ -443,6 +448,7 @@
             const grid = document.querySelector('.flashcards-grid');
             const editModeBtn = document.getElementById('editModeBtn');
             const allEditableFields = document.querySelectorAll('.front-word, .front-translation');
+            const allImageContainers = document.querySelectorAll('.flashcard-image-container');
             
             if (isEditMode) {
                 grid.classList.add('edit-mode');
@@ -452,6 +458,11 @@
                 allEditableFields.forEach(field => {
                     field.setAttribute('contenteditable', 'true');
                 });
+                // Add paste handlers for images
+                allImageContainers.forEach(container => {
+                    container.addEventListener('click', handleImageContainerClick);
+                    container.addEventListener('paste', handleImagePaste);
+                });
             } else {
                 grid.classList.remove('edit-mode');
                 editModeBtn.classList.remove('active');
@@ -459,6 +470,11 @@
                 // Disable contenteditable
                 allEditableFields.forEach(field => {
                     field.setAttribute('contenteditable', 'false');
+                });
+                // Remove paste handlers
+                allImageContainers.forEach(container => {
+                    container.removeEventListener('click', handleImageContainerClick);
+                    container.removeEventListener('paste', handleImagePaste);
                 });
             }
             
@@ -591,28 +607,62 @@
             }
         }
         
-        function triggerImageUpload(cardId) {
-            const fileInput = document.getElementById(`image-upload-${cardId}`);
-            fileInput.click();
+        function handleImageContainerClick(event) {
+            if (!isEditMode) return;
+            event.stopPropagation(); // Prevent card flip
+            const container = event.currentTarget;
+            container.focus(); // Focus to enable paste
         }
         
-        async function uploadNewImage(input, cardId) {
-            const file = input.files[0];
-            if (!file) return;
+        async function handleImagePaste(event) {
+            if (!isEditMode) return;
             
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Please select an image file.');
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const clipboardData = event.clipboardData || window.clipboardData;
+            if (!clipboardData) {
+                alert('Clipboard access not available.');
+                return;
+            }
+            
+            const items = clipboardData.items;
+            
+            // Find image in clipboard
+            let imageFile = null;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    imageFile = items[i].getAsFile();
+                    break;
+                }
+            }
+            
+            if (!imageFile) {
+                alert('No image found in clipboard. Copy an image first (Ctrl+C), then click the image area and paste (Ctrl+V).');
                 return;
             }
             
             // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
+            if (imageFile.size > 5 * 1024 * 1024) {
                 alert('Image size must be less than 5MB.');
                 return;
             }
             
-            const card = document.querySelector(`[data-card-id="${cardId}"]`);
+            const container = event.currentTarget;
+            const cardId = container.dataset.cardId;
+            await uploadImageFile(imageFile, cardId);
+        }
+        
+        async function uploadImageFile(file, cardId) {
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please paste a valid image.');
+                return;
+            }
+            
+            const card = document.querySelector(`.flashcard[data-card-id="${cardId}"]`);
             const saveIndicator = card.querySelector('.save-indicator');
             const imageElement = card.querySelector('.flashcard-image');
             
@@ -643,9 +693,6 @@
                 console.error('Error uploading image:', error);
                 alert('Failed to upload image. Please try again.');
             }
-            
-            // Clear the input so the same file can be uploaded again if needed
-            input.value = '';
         }
     </script>
 </body>
