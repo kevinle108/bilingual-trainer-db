@@ -148,6 +148,22 @@
             color: #333;
             font-size: 1.5em;
         }
+        .edit-mode .flashcard-front .word-display,
+        .edit-mode .flashcard-front .translation-display {
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .edit-mode .flashcard-front .word-display:hover,
+        .edit-mode .flashcard-front .translation-display:hover {
+            background: rgba(102, 126, 234, 0.1);
+            outline: 2px solid rgba(102, 126, 234, 0.3);
+        }
+        .edit-mode .flashcard-front .word-display:focus,
+        .edit-mode .flashcard-front .translation-display:focus {
+            background: rgba(102, 126, 234, 0.05);
+            outline: 2px solid rgba(102, 126, 234, 0.5);
+        }
         .flashcard-front .translation-display {
             display: none;
             color: #667eea;
@@ -157,6 +173,23 @@
         }
         .edit-mode .flashcard-front .translation-display {
             display: block;
+        }
+        .save-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .save-indicator.show {
+            opacity: 1;
         }
         .flashcard-back .word-display {
             color: white;
@@ -255,12 +288,19 @@
             <div class="flashcard-inner">
                 <div class="flashcard-front">
                     <button class="delete-btn" onclick="event.stopPropagation(); deleteCard(this, {{ card['id'] }})" title="Delete this card">🗑️</button>
+                    <div class="save-indicator">Saved ✓</div>
                     <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
                          alt="{{ card['english_word'] }}" 
                          class="flashcard-image"
                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-                    <div class="word-display front-word">{{ card['english_word'] }}</div>
-                    <div class="translation-display front-translation">{{ card['translated_word'] }}</div>
+                    <div class="word-display front-word" 
+                         contenteditable="false" 
+                         data-original="{{ card['english_word'] }}"
+                         onblur="saveCardEdit(this, {{ card['id'] }}, 'english')">{{ card['english_word'] }}</div>
+                    <div class="translation-display front-translation" 
+                         contenteditable="false" 
+                         data-original="{{ card['translated_word'] }}"
+                         onblur="saveCardEdit(this, {{ card['id'] }}, 'translation')">{{ card['translated_word'] }}</div>
                 </div>
                 <div class="flashcard-back">
                     <div class="word-display back-word">{{ card['translated_word'] }}</div>
@@ -356,15 +396,24 @@
             isEditMode = !isEditMode;
             const grid = document.querySelector('.flashcards-grid');
             const editModeBtn = document.getElementById('editModeBtn');
+            const allEditableFields = document.querySelectorAll('.front-word, .front-translation');
             
             if (isEditMode) {
                 grid.classList.add('edit-mode');
                 editModeBtn.classList.add('active');
                 editModeBtn.innerHTML = '✅ Edit Mode ON';
+                // Enable contenteditable
+                allEditableFields.forEach(field => {
+                    field.setAttribute('contenteditable', 'true');
+                });
             } else {
                 grid.classList.remove('edit-mode');
                 editModeBtn.classList.remove('active');
                 editModeBtn.innerHTML = '✏️ Edit Mode';
+                // Disable contenteditable
+                allEditableFields.forEach(field => {
+                    field.setAttribute('contenteditable', 'false');
+                });
             }
             
             // Save preference to localStorage
@@ -435,6 +484,64 @@
                 countElement.textContent = `Showing ${visibleCards.length} of ${total} words`;
             } else {
                 countElement.textContent = `${total} words to learn`;
+            }
+        }
+        
+        async function saveCardEdit(element, cardId, fieldType) {
+            if (!isEditMode) return;
+            
+            const newValue = element.textContent.trim();
+            const originalValue = element.dataset.original;
+            
+            // If nothing changed, don't save
+            if (newValue === originalValue || newValue === '') {
+                element.textContent = originalValue; // Reset if empty
+                return;
+            }
+            
+            const card = element.closest('.flashcard');
+            const saveIndicator = card.querySelector('.save-indicator');
+            
+            try {
+                const updateData = {};
+                if (fieldType === 'english') {
+                    updateData.english_word = newValue;
+                } else if (fieldType === 'translation') {
+                    updateData.translated_word = newValue;
+                }
+                
+                const response = await fetch(`/api/flashcard/${cardId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    // Update the data attributes
+                    element.dataset.original = newValue;
+                    if (fieldType === 'english') {
+                        card.dataset.english = newValue;
+                    } else {
+                        card.dataset.translation = newValue;
+                    }
+                    
+                    // Show save indicator
+                    saveIndicator.classList.add('show');
+                    setTimeout(() => {
+                        saveIndicator.classList.remove('show');
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to save: ${error.error || 'Unknown error'}`);
+                    element.textContent = originalValue; // Revert on error
+                }
+            } catch (error) {
+                console.error('Error saving edit:', error);
+                alert('Failed to save changes. Please try again.');
+                element.textContent = originalValue; // Revert on error
             }
         }
     </script>

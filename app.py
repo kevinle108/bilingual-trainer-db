@@ -752,6 +752,65 @@ def delete_flashcard(card_id):
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
+@app.route('/api/flashcard/<int:card_id>', methods=['PATCH'])
+def update_flashcard(card_id):
+    """Update a flashcard's English word or translation"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        conn = get_db_connection()
+        
+        # Check if the word exists
+        word = conn.execute('SELECT english_word FROM Word_Image WHERE id = ?', (card_id,)).fetchone()
+        
+        if not word:
+            conn.close()
+            return jsonify({'error': 'Flashcard not found'}), 404
+        
+        # Update English word if provided
+        if 'english_word' in data:
+            new_english = data['english_word'].strip()
+            if not new_english:
+                conn.close()
+                return jsonify({'error': 'English word cannot be empty'}), 400
+            
+            conn.execute('UPDATE Word_Image SET english_word = ? WHERE id = ?', 
+                        (new_english, card_id))
+        
+        # Update translation if provided
+        if 'translated_word' in data:
+            new_translation = data['translated_word'].strip()
+            if not new_translation:
+                conn.close()
+                return jsonify({'error': 'Translation cannot be empty'}), 400
+            
+            # Get the language_code for this card's translation
+            translation = conn.execute(
+                'SELECT language_code FROM Translation WHERE word_id = ? LIMIT 1', 
+                (card_id,)
+            ).fetchone()
+            
+            if translation:
+                conn.execute(
+                    'UPDATE Translation SET translated_word = ? WHERE word_id = ? AND language_code = ?',
+                    (new_translation, card_id, translation['language_code'])
+                )
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Successfully updated flashcard'
+        })
+        
+    except sqlite3.Error as e:
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print("="*60)
     print("🚀 Bilingual Trainer App Starting")
