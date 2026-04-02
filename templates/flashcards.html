@@ -403,7 +403,7 @@
              data-translation="{{ card['translated_word'] }}">
             <div class="flashcard-inner">
                 <div class="flashcard-front">
-                    <button class="delete-btn" onclick="event.stopPropagation(); deleteCard(this, {{ card['id'] }})" title="Delete this card">🗑️</button>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deleteCard(this, {{ card['id'] }})" title="Delete this card">✕</button>
                     <div class="save-indicator">Saved ✓</div>
                     <div class="flashcard-image-container" 
                          tabindex="0"
@@ -519,18 +519,37 @@
                 
                 if (displayMode === 'translation-first') {
                     frontWord.textContent = translatedWord;
+                    frontWord.dataset.original = translatedWord;
+                    // Update onblur to save as translation when displaying translation
+                    frontWord.setAttribute('onblur', `saveCardEdit(this, ${card.dataset.cardId}, 'translation')`);
+                    
                     backWord.textContent = englishWord;
                     frontTranslation.textContent = englishWord;
+                    frontTranslation.dataset.original = englishWord;
+                    frontTranslation.setAttribute('onblur', `saveCardEdit(this, ${card.dataset.cardId}, 'english')`);
+                    
                     grid.classList.remove('show-both');
                 } else if (displayMode === 'both') {
                     frontWord.textContent = englishWord;
+                    frontWord.dataset.original = englishWord;
+                    frontWord.setAttribute('onblur', `saveCardEdit(this, ${card.dataset.cardId}, 'english')`);
+                    
                     backWord.textContent = ''; // Clear backside text
                     frontTranslation.textContent = translatedWord;
+                    frontTranslation.dataset.original = translatedWord;
+                    frontTranslation.setAttribute('onblur', `saveCardEdit(this, ${card.dataset.cardId}, 'translation')`);
+                    
                     grid.classList.add('show-both');
                 } else { // english-first
                     frontWord.textContent = englishWord;
+                    frontWord.dataset.original = englishWord;
+                    frontWord.setAttribute('onblur', `saveCardEdit(this, ${card.dataset.cardId}, 'english')`);
+                    
                     backWord.textContent = translatedWord;
                     frontTranslation.textContent = translatedWord;
+                    frontTranslation.dataset.original = translatedWord;
+                    frontTranslation.setAttribute('onblur', `saveCardEdit(this, ${card.dataset.cardId}, 'translation')`);
+                    
                     grid.classList.remove('show-both');
                 }
             });
