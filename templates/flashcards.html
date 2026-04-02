@@ -361,11 +361,9 @@
     <div class="paste-instruction" id="pasteInstruction">Press <kbd>Ctrl+V</kbd> to paste image</div>
     
     <div class="header">
-        <h1>
-            {% if language == 'es' %}🇪🇸{% elif language == 'fr' %}🇫🇷{% elif language == 'vi' %}🇻🇳{% endif %}
+        <!-- <h1>
             {{ language_name }} Flashcards
-        </h1>
-        <p class="count" id="cardCount">{{ flashcards|length }} words to learn</p>
+        </h1> -->
         <div class="button-group">
             <a href="/chatbot?lang={{ language }}" class="toggle-btn" style="text-decoration: none; background: rgba(52, 211, 153, 0.3);">
                 🤖 AI Chatbot
@@ -375,10 +373,10 @@
             </button>
             <div class="mode-toggle-group">
                 <button class="mode-toggle-btn active" onclick="setDisplayMode('english-first')" data-mode="english-first">
-                    🔄 English First
+                    🔄 English
                 </button>
                 <button class="mode-toggle-btn" onclick="setDisplayMode('translation-first')" data-mode="translation-first">
-                    🔄 {{ language_name }} First
+                    🔄 {{ language_name }}
                 </button>
                 <button class="mode-toggle-btn" onclick="setDisplayMode('both')" data-mode="both">
                     👁️ Show Both
@@ -389,6 +387,12 @@
             <input type="number" id="cardLimit" min="1" placeholder="All" value="" style="padding: 8px 15px; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 15px; font-size: 1em; text-align: center; background: rgba(255, 255, 255, 0.9); width: 80px; margin-top: 15px;">
             <a href="/" class="back-btn">← Back to Languages</a>
         </div>
+    </div>
+    
+    <div class="card-limit-section">
+        <label for="cardLimit">Showing:</label>
+        <input type="number" id="cardLimit" min="1" placeholder="All" value="">
+        <span style="color: white; font-weight: 600; margin-left: 10px;">/ {{ flashcards|length }} words to learn</span>
     </div>
 
     <div class="flashcards-grid">
@@ -463,7 +467,6 @@
         function filterCards() {
             const limit = parseInt(document.getElementById('cardLimit').value);
             const cards = document.querySelectorAll('.flashcard');
-            const countElement = document.getElementById('cardCount');
             
             if (limit && limit > 0) {
                 cards.forEach((card, index) => {
@@ -473,11 +476,8 @@
                         card.style.display = 'none';
                     }
                 });
-                const showing = Math.min(limit, totalCards);
-                countElement.textContent = `Showing ${showing} of ${totalCards} words`;
             } else {
                 cards.forEach(card => card.style.display = '');
-                countElement.textContent = `${totalCards} words to learn`;
             }
         }
         
@@ -639,8 +639,7 @@
                     
                     setTimeout(() => {
                         card.remove();
-                        updateCardCount();
-                        filterCards(); // Update the count if filtering is active
+                        filterCards(); // Update display if filtering is active
                     }, 300);
                 } else {
                     const error = await response.json();
@@ -649,19 +648,6 @@
             } catch (error) {
                 console.error('Error deleting card:', error);
                 alert('Failed to delete card. Please try again.');
-            }
-        }
-        
-        function updateCardCount() {
-            const cards = document.querySelectorAll('.flashcard');
-            const visibleCards = Array.from(cards).filter(card => card.style.display !== 'none');
-            const countElement = document.getElementById('cardCount');
-            const total = cards.length;
-            
-            if (visibleCards.length !== total) {
-                countElement.textContent = `Showing ${visibleCards.length} of ${total} words`;
-            } else {
-                countElement.textContent = `${total} words to learn`;
             }
         }
         
