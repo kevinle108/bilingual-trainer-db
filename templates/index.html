@@ -109,23 +109,33 @@
             gap: 15px;
             margin-top: 30px;
         }
+        .divider {
+            margin: 40px 0 30px 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3) 20%, rgba(102, 126, 234, 0.3) 80%, transparent);
+            position: relative;
+        }
+        .divider::after {
+            /* content: '✨'; */
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 0 15px;
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎴 Bilingual Trainer</h1>
-        <p class="subtitle">Choose a language and learning mode</p>
-        
-        <!-- AI Generator Button -->
-        <div style="margin: 30px 0; text-align: center;">
-            <a href="/generator" class="language-btn" style="display: inline-block; width: auto;">
-                ✨ AI Flashcard Generator
-            </a>
-        </div>
+        <!-- <p class="subtitle">Choose a language and learning mode</p> -->
         
         <!-- Language Selector -->
         <div class="language-selector">
-            <label class="language-selector-label">Select Language:</label>
+            <!-- <label class="language-selector-label">Select Language:</label> -->
+            <p class="subtitle">Choose a language and learning mode:</p>
             <div class="lang-toggle-group">
                 <button class="lang-toggle-btn" onclick="selectLanguage('es')" data-lang="es">
                     🇪🇸 Spanish
@@ -146,6 +156,17 @@
             </a>
             <a href="/chatbot?lang=vi" class="language-btn" id="chatbotBtn" style="background: linear-gradient(135deg, #34d399 0%, #059669 100%); box-shadow: 0 5px 15px rgba(52, 211, 153, 0.4);">
                 🤖 AI Chatbot
+            </a>
+        </div>
+
+        <!-- Visual Separator -->
+        <div class="divider"></div>
+
+        <!-- AI Generator Button -->
+        <p class="subtitle">Or generate custom flashcards with AI!</p> 
+        <div style="margin: 30px 0; text-align: center;">
+            <a href="/generator" class="language-btn" style="display: inline-block; width: auto;">
+                ✨ AI Flashcard Generator
             </a>
         </div>
     </div>
