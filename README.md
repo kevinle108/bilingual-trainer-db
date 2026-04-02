@@ -6,6 +6,19 @@ A comprehensive AI-powered language learning application with interactive flashc
 ![AI Powered](https://img.shields.io/badge/AI-LangChain%20%7C%20GPT--4o--mini-green)
 ![MCP](https://img.shields.io/badge/MCP-Copilot%20Integration-purple)
 
+
+<img width="2556" height="1349" alt="image" src="https://github.com/user-attachments/assets/20480bb3-41b4-450b-9ffa-16daf45373ad" />
+
+<img width="2542" height="1346" alt="image" src="https://github.com/user-attachments/assets/b3c10090-69f5-4a65-a8f8-8e397051e5ee" />
+
+<img width="2538" height="1340" alt="image" src="https://github.com/user-attachments/assets/068bc7e2-da26-43ab-b573-edf0a150e111" />
+
+<img width="2559" height="1350" alt="image" src="https://github.com/user-attachments/assets/f104cdbb-2a76-4960-a73e-1e8db7e26238" />
+
+<img width="909" height="585" alt="image" src="https://github.com/user-attachments/assets/7c3975b4-4aa1-4f75-999c-0f89f15097fe" />
+
+<img width="858" height="1041" alt="image" src="https://github.com/user-attachments/assets/ef50fc8c-8ffd-4217-b476-1ee90d4559a4" />
+
 ## 🌟 Features
 
 ### 📚 Interactive Flashcards
