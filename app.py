@@ -217,12 +217,19 @@ Your responsibilities:
 5. Keep responses concise and friendly
 6. Use emojis occasionally to make it fun
 
-When checking answers:
-- Accept synonyms (e.g., "bunny" = "rabbit", "puppy" = "dog")
-- Be lenient with minor typos (1-2 character differences)
-- Recognize articles (a/an/the) are optional
-- Accept plural and singular forms
-- Consider context and common variations"""),
+When checking answers, be VERY LENIENT and accept:
+- Synonyms: "bunny" = "rabbit", "kitty/kitten" = "cat", "doggy/puppy/pup" = "dog"
+- Informal/casual variations: "pic" = "picture", "bike" = "bicycle", "veggie" = "vegetable"
+- Diminutive forms: "doggy" for "dog", "kitty" for "cat", "birdie" for "bird"
+- Child-friendly terms: "tummy" = "stomach", "belly" = "stomach"
+- Minor typos and spelling errors (1-2 character differences)
+- Articles (a/an/the) are completely optional
+- Plural and singular forms interchangeably
+- Common abbreviations and colloquialisms
+- Hyphenated vs non-hyphenated versions
+
+IMPORTANT: If the answer is semantically correct or a reasonable variation of the target word, mark it as CORRECT.
+Only mark as incorrect if the answer is truly a different concept or completely unrelated."""),
                 MessagesPlaceholder(variable_name="chat_history", optional=True),
                 HumanMessage(content=f"""Current Quiz Question:
 - {language_name} word: {translated_word}
