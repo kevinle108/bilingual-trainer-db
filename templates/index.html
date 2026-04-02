@@ -63,6 +63,51 @@
             font-size: 2em;
             margin-right: 10px;
         }
+        .language-selector {
+            margin: 30px 0;
+        }
+        .language-selector-label {
+            color: #667eea;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .lang-toggle-group {
+            display: inline-flex;
+            gap: 0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .lang-toggle-btn {
+            padding: 15px 30px;
+            background: #f5f5f5;
+            color: #667eea;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.2s;
+            border-right: 2px solid rgba(102, 126, 234, 0.2);
+        }
+        .lang-toggle-btn:last-child {
+            border-right: none;
+        }
+        .lang-toggle-btn:hover {
+            background: #e5e5e5;
+        }
+        .lang-toggle-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+        .mode-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
     </style>
 </head>
 <body>
@@ -77,31 +122,64 @@
             </a>
         </div>
         
-        <div class="language-grid">
-            {% for lang in languages %}
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.4em;">
-                        {% if lang['language_code'] == 'es' %}
-                            <span class="flag">🇪🇸</span> Spanish
-                        {% elif lang['language_code'] == 'fr' %}
-                            <span class="flag">🇫🇷</span> French
-                        {% elif lang['language_code'] == 'vi' %}
-                            <span class="flag">🇻🇳</span> Vietnamese
-                        {% else %}
-                            {{ language_names.get(lang['language_code'], lang['language_code']) }}
-                        {% endif %}
-                    </h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <a href="/flashcards?lang={{ lang['language_code'] }}" class="language-btn" style="font-size: 1em; padding: 20px;">
-                            🎴 Flashcards
-                        </a>
-                        <a href="/chatbot?lang={{ lang['language_code'] }}" class="language-btn" style="font-size: 1em; padding: 20px; background: linear-gradient(135deg, #34d399 0%, #059669 100%); box-shadow: 0 5px 15px rgba(52, 211, 153, 0.4);">
-                            🤖 AI Chatbot
-                        </a>
-                    </div>
-                </div>
-            {% endfor %}
+        <!-- Language Selector -->
+        <div class="language-selector">
+            <label class="language-selector-label">Select Language:</label>
+            <div class="lang-toggle-group">
+                <button class="lang-toggle-btn" onclick="selectLanguage('es')" data-lang="es">
+                    🇪🇸 Spanish
+                </button>
+                <button class="lang-toggle-btn" onclick="selectLanguage('fr')" data-lang="fr">
+                    🇫🇷 French
+                </button>
+                <button class="lang-toggle-btn active" onclick="selectLanguage('vi')" data-lang="vi">
+                    🇻🇳 Vietnamese
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mode Buttons -->
+        <div class="mode-buttons">
+            <a href="/flashcards?lang=vi" class="language-btn" id="flashcardsBtn">
+                🎴 Flashcards
+            </a>
+            <a href="/chatbot?lang=vi" class="language-btn" id="chatbotBtn" style="background: linear-gradient(135deg, #34d399 0%, #059669 100%); box-shadow: 0 5px 15px rgba(52, 211, 153, 0.4);">
+                🤖 AI Chatbot
+            </a>
         </div>
     </div>
+    
+    <script>
+        let selectedLanguage = 'vi'; // Default to Vietnamese
+        
+        // Load saved language preference from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('selectedLanguage');
+            if (savedLang) {
+                selectLanguage(savedLang);
+            }
+        });
+        
+        function selectLanguage(langCode) {
+            selectedLanguage = langCode;
+            
+            // Update active state on buttons
+            const buttons = document.querySelectorAll('.lang-toggle-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.lang === langCode) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Update links
+            document.getElementById('flashcardsBtn').href = `/flashcards?lang=${langCode}`;
+            document.getElementById('chatbotBtn').href = `/chatbot?lang=${langCode}`;
+            
+            // Save preference to localStorage
+            localStorage.setItem('selectedLanguage', langCode);
+        }
+    </script>
 </body>
 </html>
