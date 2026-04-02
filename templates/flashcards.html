@@ -13,6 +13,7 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
             min-height: 100vh;
             padding: 40px 20px;
         }
@@ -389,9 +390,9 @@
     </div>
     
     <div class="card-limit-section">
-        <label for="cardLimit">Show cards:</label>
+        <label for="cardLimit">How Many:</label>
         <input type="number" id="cardLimit" min="1" placeholder="All" value="">
-        <small>Leave empty to show all cards</small>
+        <!-- <small>Leave empty to show all cards</small> -->
     </div>
 
     <div class="flashcards-grid">
