@@ -28,7 +28,7 @@ MODEL_NAME = os.getenv("MODEL_NAME", "openai/gpt-4o-mini")
 # ImageRouter API configuration
 # Using FLUX-2-klein-9b model for high-quality kid-friendly flashcard images
 # Cost: $0.08 per 100 images
-# Prompt format: "a cute picture of [word] with no text, suitable for a kid's flashcard"
+# Prompt format: Kawaii-style cartoon with soft rounded shapes, bright colors, plain white background
 IMAGE_ROUTER_API_KEY = os.getenv("IMAGE_ROUTER_API_KEY")
 IMAGE_ROUTER_API_URL = "https://api.imagerouter.io/v1/openai/images/generations"
 IMAGE_ROUTER_MODEL = "black-forest-labs/FLUX-2-klein-9b"  # $0.08/100 images - high quality
@@ -292,7 +292,7 @@ Respond in JSON format exactly like this:
                     
                     if intent_data.get('wants_generation'):
                         theme = intent_data.get('theme', 'general vocabulary')
-                        count = min(max(intent_data.get('count', 10), 5), 15)  # Limit 5-15 for chatbot
+                        count = min(max(intent_data.get('count', 10), 1), 15)  # Limit 1-15 for chatbot
                         
                         # Generate flashcards
                         session.add_message("user", user_message)
@@ -384,8 +384,8 @@ def generate_image_with_imagerouter(word: str) -> Optional[str]:
         return None
     
     try:
-        # Create kid-friendly prompt
-        prompt = f"a cute picture of {word} with no text, suitable for a kid's flashcard"
+        # Create kid-friendly kawaii-style prompt
+        prompt = f"A cute kawaii-style cartoon illustration of a {word}. Use soft rounded shapes, simple details, bright flat colors, clean outlines, and a friendly child-safe appearance. Plain white background with a small soft shadow under the character."
         
         print(f"🎨 Generating AI image for '{word}'...")
         print(f"   Prompt: {prompt}")
@@ -613,7 +613,7 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
         if not isinstance(flashcards, list):
             raise ValueError("AI did not return a list of flashcards")
         
-        if len(flashcards) < max(3, count - 2):  # Allow some tolerance
+        if len(flashcards) < max(1, count - 2):  # Allow some tolerance
             raise ValueError(f"AI only generated {len(flashcards)} cards instead of {count}")
         
         # Insert into database
@@ -717,8 +717,8 @@ def generate_flashcards_api():
     if not theme:
         return jsonify({'success': False, 'error': 'Theme is required'}), 400
     
-    if count < 3 or count > 30:
-        return jsonify({'success': False, 'error': 'Count must be between 3 and 30'}), 400
+    if count < 1 or count > 30:
+        return jsonify({'success': False, 'error': 'Count must be between 1 and 30'}), 400
     
     # Use the helper function
     result = generate_flashcard_set(theme, language_code, count, fetch_images)
