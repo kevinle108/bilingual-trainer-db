@@ -25,7 +25,7 @@
             font-size: 2.5em;
             margin-bottom: 10px;
         }
-        .back-btn, .shuffle-btn, .toggle-btn {
+        .back-btn, .shuffle-btn, .toggle-btn, .mode-select {
             display: inline-block;
             padding: 12px 30px;
             background: rgba(255, 255, 255, 0.2);
@@ -39,6 +39,24 @@
             border: none;
             cursor: pointer;
             font-size: 1em;
+        }
+        .mode-select {
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.25);
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 40px;
+        }
+        .mode-select:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .mode-select option {
+            background: #667eea;
+            color: white;
         }
         .back-btn:hover, .shuffle-btn:hover, .toggle-btn:hover {
             background: rgba(255, 255, 255, 0.3);
@@ -171,8 +189,12 @@
             margin-top: 10px;
             font-weight: 600;
         }
-        .edit-mode .flashcard-front .translation-display {
+        .edit-mode .flashcard-front .translation-display,
+        .show-both .flashcard-front .translation-display {
             display: block;
+        }
+        .show-both .flip-hint {
+            display: none;
         }
         .save-indicator {
             position: absolute;
@@ -340,9 +362,11 @@
             <button class="toggle-btn edit-mode-btn" onclick="toggleEditMode()" id="editModeBtn">
                 ✏️ Edit Mode
             </button>
-            <button class="toggle-btn" onclick="toggleLanguageDirection()" id="toggleBtn">
-                🔄 Show {{ language_name }} First
-            </button>
+            <select class="mode-select" onchange="changeDisplayMode()" id="modeSelect">
+                <option value="english-first">🔄 Show English First</option>
+                <option value="translation-first">🔄 Show {{ language_name }} First</option>
+                <option value="both">👁️ Show Both</option>
+            </select>
             <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
             <a href="/" class="back-btn">← Back to Languages</a>
         </div>
@@ -393,7 +417,7 @@
     </div>
     
     <script>
-        let isReversed = false;
+        let displayMode = 'english-first'; // 'english-first', 'translation-first', or 'both'
         let isEditMode = false;
         const languageName = '{{ language_name }}';
         const totalCards = {{ flashcards|length }};
@@ -401,8 +425,10 @@
         // Load saved preferences from localStorage
         window.addEventListener('DOMContentLoaded', () => {
             const savedMode = localStorage.getItem('flashcardMode');
-            if (savedMode === 'reversed') {
-                toggleLanguageDirection();
+            if (savedMode) {
+                displayMode = savedMode;
+                document.getElementById('modeSelect').value = savedMode;
+                applyDisplayMode();
             }
             
             const savedEditMode = localStorage.getItem('editMode');
@@ -442,10 +468,16 @@
             }
         }
         
-        function toggleLanguageDirection() {
-            isReversed = !isReversed;
+        function changeDisplayMode() {
+            displayMode = document.getElementById('modeSelect').value;
+            applyDisplayMode();
+            // Save preference to localStorage
+            localStorage.setItem('flashcardMode', displayMode);
+        }
+        
+        function applyDisplayMode() {
             const cards = document.querySelectorAll('.flashcard');
-            const toggleBtn = document.getElementById('toggleBtn');
+            const grid = document.querySelector('.flashcards-grid');
             
             cards.forEach(card => {
                 // Reset flip state
@@ -457,21 +489,23 @@
                 const backWord = card.querySelector('.back-word');
                 const frontTranslation = card.querySelector('.front-translation');
                 
-                if (isReversed) {
+                if (displayMode === 'translation-first') {
                     frontWord.textContent = translatedWord;
                     backWord.textContent = englishWord;
                     frontTranslation.textContent = englishWord;
-                    toggleBtn.innerHTML = '🔄 Show English First';
-                } else {
+                    grid.classList.remove('show-both');
+                } else if (displayMode === 'both') {
+                    frontWord.textContent = englishWord;
+                    backWord.textContent = ''; // Clear backside text
+                    frontTranslation.textContent = translatedWord;
+                    grid.classList.add('show-both');
+                } else { // english-first
                     frontWord.textContent = englishWord;
                     backWord.textContent = translatedWord;
                     frontTranslation.textContent = translatedWord;
-                    toggleBtn.innerHTML = `🔄 Show ${languageName} First`;
+                    grid.classList.remove('show-both');
                 }
             });
-            
-            // Save preference to localStorage
-            localStorage.setItem('flashcardMode', isReversed ? 'reversed' : 'normal');
         }
         
         function toggleEditMode() {
