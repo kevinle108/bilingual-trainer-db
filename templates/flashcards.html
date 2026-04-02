@@ -64,7 +64,7 @@
         .mode-toggle-group {
             display: inline-flex;
             gap: 0;
-            margin: 15px 10px 0;
+            margin: 32px 8px 8px;
             border-radius: 25px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -101,7 +101,7 @@
 
         .card-limit-section {
             text-align: center;
-            margin: 20px auto;
+            margin: 25px auto;
             max-width: 400px;
         }
 
@@ -433,20 +433,6 @@
         <h1>
             {{ language_name }} Flashcards
         </h1>
-
-            <div style="text-align: center;">
-        <div class="mode-toggle-group">
-            <button class="mode-toggle-btn active" onclick="setDisplayMode('english-first')" data-mode="english-first">
-                🔄 English
-            </button>
-            <button class="mode-toggle-btn" onclick="setDisplayMode('translation-first')" data-mode="translation-first">
-                🔄 {{ language_name }}
-            </button>
-            <button class="mode-toggle-btn" onclick="setDisplayMode('both')" data-mode="both">
-                👁️ Show Both
-            </button>
-        </div>
-    </div>
         <div class="button-group">
             <a href="/chatbot?lang={{ language }}" class="toggle-btn"
                 style="text-decoration: none; background: rgba(52, 211, 153, 0.3);">
@@ -459,15 +445,32 @@
             <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
             <a href="/" class="back-btn">← Back to Home</a>
         </div>
+
+
+        <div class="mode-toggle-group">
+                <button class="mode-toggle-btn active" onclick="setDisplayMode('english-first')"
+                    data-mode="english-first">
+                    🔄 English
+                </button>
+                <button class="mode-toggle-btn" onclick="setDisplayMode('translation-first')"
+                    data-mode="translation-first">
+                    🔄 {{ language_name }}
+                </button>
+                <button class="mode-toggle-btn" onclick="setDisplayMode('both')" data-mode="both">
+                    👁️ Show Both
+                </button>
+        </div>
+
+        <div class="card-limit-section">
+            <label for="cardLimit">Showing:</label>
+            <input type="number" id="cardLimit" min="1" placeholder="All" value="">
+            <span style="color: white; font-weight: 600; margin-left: 10px;">/ {{ flashcards|length }} words to
+                learn</span>
+        </div>
     </div>
 
 
 
-    <div class="card-limit-section">
-        <label for="cardLimit">Showing:</label>
-        <input type="number" id="cardLimit" min="1" placeholder="All" value="">
-        <span style="color: white; font-weight: 600; margin-left: 10px;">/ {{ flashcards|length }} words to learn</span>
-    </div>
 
     <div class="flashcards-grid">
         {% for card in flashcards %}
