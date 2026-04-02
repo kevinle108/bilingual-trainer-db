@@ -25,7 +25,7 @@
             font-size: 2.5em;
             margin-bottom: 10px;
         }
-        .back-btn, .shuffle-btn, .toggle-btn, .mode-select {
+        .back-btn, .shuffle-btn, .toggle-btn {
             display: inline-block;
             padding: 12px 30px;
             background: rgba(255, 255, 255, 0.2);
@@ -33,36 +33,47 @@
             text-decoration: none;
             border-radius: 25px;
             font-weight: bold;
-            transition: background 0.2s;
+            transition: all 0.2s;
             margin-top: 15px;
             margin: 15px 10px 0;
             border: none;
             cursor: pointer;
             font-size: 1em;
         }
-        .mode-select {
-            padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.25);
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            padding-right: 40px;
-        }
-        .mode-select:hover {
-            background-color: rgba(255, 255, 255, 0.3);
-        }
-        .mode-select option {
-            background: #667eea;
-            color: white;
-        }
         .back-btn:hover, .shuffle-btn:hover, .toggle-btn:hover {
             background: rgba(255, 255, 255, 0.3);
         }
         .shuffle-btn, .toggle-btn {
             background: rgba(255, 255, 255, 0.25);
+        }
+        .mode-toggle-group {
+            display: inline-flex;
+            gap: 0;
+            margin: 15px 10px 0;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .mode-toggle-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.2s;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .mode-toggle-btn:last-child {
+            border-right: none;
+        }
+        .mode-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .mode-toggle-btn.active {
+            background: rgba(255, 255, 255, 0.5);
+            font-weight: bold;
         }
         .button-group {
             margin-top: 20px;
@@ -362,11 +373,17 @@
             <button class="toggle-btn edit-mode-btn" onclick="toggleEditMode()" id="editModeBtn">
                 ✏️ Edit Mode
             </button>
-            <select class="mode-select" onchange="changeDisplayMode()" id="modeSelect">
-                <option value="english-first">🔄 Show English First</option>
-                <option value="translation-first">🔄 Show {{ language_name }} First</option>
-                <option value="both">👁️ Show Both</option>
-            </select>
+            <div class="mode-toggle-group">
+                <button class="mode-toggle-btn active" onclick="setDisplayMode('english-first')" data-mode="english-first">
+                    🔄 English First
+                </button>
+                <button class="mode-toggle-btn" onclick="setDisplayMode('translation-first')" data-mode="translation-first">
+                    🔄 {{ language_name }} First
+                </button>
+                <button class="mode-toggle-btn" onclick="setDisplayMode('both')" data-mode="both">
+                    👁️ Show Both
+                </button>
+            </div>
             <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
             <a href="/" class="back-btn">← Back to Languages</a>
         </div>
@@ -427,7 +444,7 @@
             const savedMode = localStorage.getItem('flashcardMode');
             if (savedMode) {
                 displayMode = savedMode;
-                document.getElementById('modeSelect').value = savedMode;
+                updateModeButtons();
                 applyDisplayMode();
             }
             
@@ -468,11 +485,23 @@
             }
         }
         
-        function changeDisplayMode() {
-            displayMode = document.getElementById('modeSelect').value;
+        function setDisplayMode(mode) {
+            displayMode = mode;
+            updateModeButtons();
             applyDisplayMode();
             // Save preference to localStorage
             localStorage.setItem('flashcardMode', displayMode);
+        }
+        
+        function updateModeButtons() {
+            const buttons = document.querySelectorAll('.mode-toggle-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.mode === displayMode) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
         }
         
         function applyDisplayMode() {
