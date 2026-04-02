@@ -305,7 +305,8 @@
             correctAnswers: 0,
             totalAttempts: 0,
             streak: 0,
-            mode: 'quiz' // quiz, practice, chat
+            mode: 'quiz', // quiz, chat
+            showImages: false // toggle for showing images during quiz
         };
 
         // Initialize chat
@@ -314,7 +315,6 @@
             setTimeout(() => {
                 showQuickReplies([
                     "Start Quiz",
-                    "Practice Mode",
                     "Generate flashcards"
                 ]);
             }, 1000);
@@ -447,6 +447,16 @@
         function processUserMessage(message) {
             const lowerMsg = message.toLowerCase();
             
+            // Check for image toggle commands first (before quiz answer check)
+            if (lowerMsg.includes('show image') || lowerMsg.includes('images on') || lowerMsg.includes('enable image')) {
+                toggleImages(true);
+                return;
+            }
+            if (lowerMsg.includes('hide image') || lowerMsg.includes('images off') || lowerMsg.includes('disable image') || lowerMsg.includes('no image')) {
+                toggleImages(false);
+                return;
+            }
+            
             // Check if answering a quiz question
             if (currentCard) {
                 checkAnswer(message);
@@ -460,10 +470,6 @@
             }
             if (lowerMsg.includes('quiz') || lowerMsg.includes('start')) {
                 startQuiz();
-                return;
-            }
-            if (lowerMsg.includes('practice')) {
-                startPractice();
                 return;
             }
             if (lowerMsg.includes('progress') || lowerMsg.includes('stats')) {
@@ -520,7 +526,7 @@
                 // If flashcards were generated, offer to practice
                 if (result.generated) {
                     setTimeout(() => {
-                        showQuickReplies(["Start Quiz", "Tell me more", "Generate more cards"]);
+                        showQuickReplies(["Start Quiz", "Generate more cards"]);
                     }, 1000);
                 }
                 
@@ -533,15 +539,7 @@
 
         function startQuiz() {
             gameState.mode = 'quiz';
-            addBotMessage("🎯 Great! Let's start the quiz. I'll show you a " + languageName + " word and image, and you tell me the English translation!");
-            setTimeout(() => {
-                askQuestion();
-            }, 1000);
-        }
-
-        function startPractice() {
-            gameState.mode = 'practice';
-            addBotMessage("📚 Practice mode activated! I'll quiz you, but I'll give you hints if you need help.");
+            addBotMessage("🎯 Great! Let's start the quiz. I'll show you a " + languageName + " word, and you tell me the English translation!");
             setTimeout(() => {
                 askQuestion();
             }, 1000);
@@ -551,11 +549,30 @@
             // Get a random flashcard
             currentCard = flashcards[Math.floor(Math.random() * flashcards.length)];
             
-            const imageUrl = `/images/${currentCard.image_file}`;
+            const imageUrl = gameState.showImages ? `/images/${currentCard.image_file}` : null;
             const question = `What is the English word for <span class="word-highlight">${currentCard.translated_word}</span>?`;
             
             addBotMessage(question, imageUrl);
-            // Note: Conversation history is now managed by LangChain on the server
+        }
+
+        function toggleImages(show) {
+            gameState.showImages = show;
+            const status = show ? 'enabled 🖼️' : 'disabled 🚫';
+            addBotMessage(`Images ${status}! ${show ? 'You will now see images with each question.' : 'Questions will appear without images for a harder challenge!'}`);
+            
+            if (currentCard) {
+                // If in the middle of a question, re-display the SAME card with new image setting
+                setTimeout(() => {
+                    const imageUrl = gameState.showImages ? `/images/${currentCard.image_file}` : null;
+                    const question = `What is the English word for <span class="word-highlight">${currentCard.translated_word}</span>?`;
+                    addBotMessage(question, imageUrl);
+                }, 500);
+            } else {
+                // Not in a quiz, offer next steps
+                setTimeout(() => {
+                    showQuickReplies(["Start Quiz", "Show Progress", "Help"]);
+                }, 500);
+            }
         }
 
         async function checkAnswer(answer) {
@@ -575,7 +592,7 @@
                         currentCard: currentCard,
                         mode: gameState.mode,
                         languageName: languageName,
-                        sessionId: sessionId // LangChain manages conversation history on server
+                        sessionId: sessionId
                     })
                 });
                 
@@ -592,8 +609,6 @@
                     currentCard = null;
                     return;
                 }
-                
-                // LangChain manages conversation history on the server
                 
                 if (result.correct) {
                     // Correct answer!
@@ -613,16 +628,16 @@
                     gameState.streak = 0;
                     updateStats();
                     
-                    addBotMessage(result.message);
+                    // Always show the correct answer
+                    const correctAnswerMessage = result.message + 
+                        `<br><br>The correct answer is: <span class="word-highlight">${currentCard.translated_word}</span> = <span class="word-highlight">${currentCard.english_word}</span>`;
+                    addBotMessage(correctAnswerMessage);
                     
-                    // In quiz mode, move to next question. In practice mode, let them try again.
-                    if (gameState.mode === 'quiz') {
-                        currentCard = null;
-                        setTimeout(() => {
-                            showQuickReplies(["Next Question", "Switch to Practice Mode", "Take a Break"]);
-                        }, 1000);
-                    }
-                    // In practice mode, keep currentCard so they can try again
+                    // Move to next question
+                    currentCard = null;
+                    setTimeout(() => {
+                        showQuickReplies(["Next Question", "Take a Break"]);
+                    }, 1000);
                 }
                 
             } catch (error) {
@@ -675,12 +690,12 @@
         function showHelp() {
             addBotMessage(`I can help you learn ${languageName} in several ways:<br><br>
                 🎯 <strong>Quiz Mode:</strong> Test your knowledge<br>
-                📚 <strong>Practice Mode:</strong> Learn with hints<br>
                 ✨ <strong>Generate Flashcards:</strong> Create custom vocabulary sets on any topic<br>
-                📊 <strong>Progress:</strong> See your stats<br><br>
+                📊 <strong>Progress:</strong> See your stats<br>
+                🖼️ <strong>Toggle Images:</strong> Say "hide images" or "show images" to control quiz difficulty<br><br>
                 Just tell me what you'd like to do! Try: "Generate flashcards about food"`);
             
-            showQuickReplies(["Start Quiz", "Practice Mode", "Generate flashcards"]);
+            showQuickReplies(["Start Quiz", "Generate flashcards"]);
         }
 
         function updateStats() {
