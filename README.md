@@ -14,16 +14,6 @@ A comprehensive AI-powered language learning application with interactive flashc
 - **Organized Database**: SQLite backend with efficient storage
 - **Clean Interface**: Easy-to-navigate flashcard viewer
 
-### 🤖 AI Chatbot Tutor (LangChain-Powered)
-- **Intelligent Answer Checking**: Accepts synonyms, typos, and variations
-- **Conversation Memory**: Remembers context across the entire chat session
-- **Two Modes**:
-  - **Quiz Mode**: Tests your knowledge with immediate feedback
-  - **Practice Mode**: Provides hints without giving away answers
-- **Structured Responses**: Reliable JSON output using Pydantic validation
-- **Encouraging Feedback**: Friendly, emoji-enhanced responses
-- **Context-Aware**: Maintains conversation history for natural interactions
-
 ### ✨ AI Flashcard Generator
 - **Custom Topics**: Generate flashcards on any theme (animals, food, travel, etc.)
 - **Flexible Count**: Create 3-30 flashcards per generation
@@ -31,6 +21,15 @@ A comprehensive AI-powered language learning application with interactive flashc
 - **Database Integration**: Generated cards are automatically saved
 - **Duplicate Prevention**: Smart checking to avoid redundant entries
 - **Multi-Language**: Supports all available languages
+
+### 🤖 AI Chatbot Tutor (LangChain-Powered)
+- **Intelligent Answer Checking**: Accepts synonyms, typos, and variations
+- **Conversation Memory**: Remembers context across the entire chat session
+- **Two Modes**:
+  - **Quiz Mode**: Tests your knowledge with immediate feedback
+  - **Flashcard Generator Mode**: Generate flashcards via chat
+- **Encouraging Feedback**: Friendly, emoji-enhanced responses
+- **Context-Aware**: Maintains conversation history for natural interactions
 
 ### 🔌 MCP Server (Model Context Protocol)
 - **GitHub Copilot Integration**: Interact with your database through Copilot
@@ -44,7 +43,7 @@ A comprehensive AI-powered language learning application with interactive flashc
 ### Prerequisites
 - Python 3.8+
 - GitHub account with API access
-- (Optional) ImageRouter API key for image generation
+- ImageRouter API key for image generation (optional but recommended for full experience)
 
 ### Installation
 
@@ -79,7 +78,7 @@ A comprehensive AI-powered language learning application with interactive flashc
    API_ENDPOINT=https://models.github.ai/inference
    MODEL_NAME=openai/gpt-4o-mini
    
-   # Optional for image generation
+   # Image generation
    IMAGE_ROUTER_API_KEY=your_imagerouter_key_here
    ```
 
@@ -131,7 +130,7 @@ A comprehensive AI-powered language learning application with interactive flashc
    - **Language**: Spanish, French, or Vietnamese
    - **Count**: 3-30 flashcards
    - **Details** (optional): Specify level, preferences
-   - **Fetch Images**: Check to auto-download images from Wikimedia
+   - **Fetch Images**: Check to generate images with AI
 3. Click **"✨ Generate Flashcards with AI"**
 4. Wait 10-30 seconds
 5. View your new flashcards immediately!
@@ -187,7 +186,6 @@ The MCP server allows GitHub Copilot to interact with your database directly!
   - Pydantic (structured output validation)
 - **Database**: SQLite with relational schema
 - **Image Sources**: 
-  - Wikimedia Commons (free, educational)
   - ImageRouter API (FLUX-2-klein-9b model)
 - **MCP**: FastMCP for Copilot integration
 
@@ -204,66 +202,6 @@ Translation
 ├── language_code (es/fr/vi)
 └── translated_word
 ```
-
-### LangChain Architecture
-```
-User Input → Flask Endpoint
-     ↓
-Session Management (conversation memory)
-     ↓
-ChatPromptTemplate (structured prompts)
-     ↓
-ChatOpenAI (GitHub Models API)
-     ↓
-JsonOutputParser (Pydantic validation)
-     ↓
-Response → User Interface
-```
-
-## 📁 Project Structure
-```
-bilingual-trainer-db/
-├── app.py                    # Main Flask application
-├── create_db.py             # Database initialization
-├── mcp_server.py            # MCP server for Copilot
-├── requirements.txt         # Python dependencies
-├── .env                     # Environment variables (create this)
-│
-├── templates/               # HTML templates
-│   ├── index.html          # Home page
-│   ├── flashcards.html     # Flashcard viewer
-│   ├── chatbot.html        # AI chatbot interface
-│   └── generator.html      # Flashcard generator
-│
-├── static/images/          # Static web images
-├── image-library/          # Flashcard images
-├── test_images/            # Test image assets
-│
-├── README.md               # This file
-├── AI_README.md           # LangChain/Chatbot details
-├── GENERATOR_README.md    # Generator user guide
-├── MCP_README.md          # MCP server documentation
-│
-├── NOTES/                  # Development notes
-├── POCs/                   # Proof of concepts
-└── REFERENCE/              # Reference implementations
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `GITHUB_TOKEN` | GitHub API token | ✅ Yes | - |
-| `API_ENDPOINT` | GitHub Models endpoint | No | `https://models.github.ai/inference` |
-| `MODEL_NAME` | LLM model to use | No | `openai/gpt-4o-mini` |
-| `IMAGE_ROUTER_API_KEY` | ImageRouter API key | No (for generator) | - |
-
-### Available Models
-- `openai/gpt-4o-mini` (default - fast, cost-effective)
-- `openai/gpt-4o` (more powerful)
-- `meta-llama/Llama-3.3-70B-Instruct`
-- More on [GitHub Models](https://github.com/marketplace/models)
 
 ## 🐛 Troubleshooting
 
@@ -293,20 +231,14 @@ python create_db.py
 - Verify image file paths in database
 - Ensure Flask is serving from correct directory
 
-## 📚 Additional Documentation
-
-- **[AI_README.md](AI_README.md)** - Detailed LangChain implementation and chatbot features
-- **[GENERATOR_README.md](GENERATOR_README.md)** - Complete flashcard generator guide
-- **[MCP_README.md](MCP_README.md)** - MCP server setup and tool reference
-
 ## 🎯 Use Cases
 
-### Students
+### Kids / Students
 - Build vocabulary in Spanish, French, or Vietnamese
 - Practice with AI-powered quiz and hints
 - Generate custom study sets for exams
 
-### Teachers
+### Parents & Teachers
 - Create themed flashcard sets for lessons
 - Track vocabulary coverage with database queries
 - Use MCP to manage class materials
@@ -317,29 +249,13 @@ python create_db.py
 - Build comprehensive personal dictionary
 
 ## 🔮 Future Enhancements
-- [ ] User authentication and personal progress tracking
-- [ ] Spaced repetition algorithm (SRS)
-- [ ] Audio pronunciation support
-- [ ] More languages (German, Italian, Japanese, etc.)
-- [ ] Mobile app version
-- [ ] Export flashcards to Anki format
-- [ ] Collaborative learning features
-
-## 🤝 Contributing
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
-
-## 📄 License
-This project is open source and available for educational purposes.
+- [ ] Refactor for better organization
+- [ ] Single custom card generator
+- [ ] Better chat interactions
 
 ## 🙏 Acknowledgments
-- **GitHub Models API** - AI model access
-- **LangChain** - Conversation framework
-- **Wikimedia Commons** - Free educational images
-- **ImageRouter** - Image generation service
-- **FastMCP** - Model Context Protocol implementation
+- **Code:You, Code:Louisville** - deep gratitude to Instructor Daniel Waddell and Mentor Radmila Gogzheyan who graciously volunteered their time to teach the AI class
+- **My Daughter** - who was main inspiration for this app
+- **My Wife** - who held down the fort during class nights or whenever I was working on this project
 
----
 
-**Happy Learning!** 🎓✨
-
-For questions or support, please open an issue on GitHub.
