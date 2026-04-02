@@ -92,6 +92,9 @@
             height: 350px;
             cursor: pointer;
         }
+        .edit-mode .flashcard {
+            cursor: default;
+        }
         .flashcard-inner {
             position: relative;
             width: 100%;
@@ -145,6 +148,123 @@
             color: #333;
             font-size: 1.5em;
         }
+        .edit-mode .flashcard-front .word-display,
+        .edit-mode .flashcard-front .translation-display {
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .edit-mode .flashcard-front .word-display:hover,
+        .edit-mode .flashcard-front .translation-display:hover {
+            background: rgba(102, 126, 234, 0.1);
+            outline: 2px solid rgba(102, 126, 234, 0.3);
+        }
+        .edit-mode .flashcard-front .word-display:focus,
+        .edit-mode .flashcard-front .translation-display:focus {
+            background: rgba(102, 126, 234, 0.05);
+            outline: 2px solid rgba(102, 126, 234, 0.5);
+        }
+        .flashcard-front .translation-display {
+            display: none;
+            color: #667eea;
+            font-size: 1.3em;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .edit-mode .flashcard-front .translation-display {
+            display: block;
+        }
+        .save-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .save-indicator.show {
+            opacity: 1;
+        }
+        .flashcard-image-container {
+            position: relative;
+            width: 100%;
+        }
+        .change-image-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(102, 126, 234, 0.95);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 0.95em;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 5;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .edit-mode .flashcard-image-container:hover .change-image-btn {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .change-image-btn:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+        .change-image-btn:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+        .change-image-btn {
+            white-space: nowrap;
+        }
+        .edit-mode .flashcard-image-container {
+            cursor: pointer;
+            position: relative;
+        }
+        .edit-mode .flashcard-image-container:focus {
+            outline: 2px solid rgba(102, 126, 234, 0.5);
+            outline-offset: 2px;
+        }
+        .paste-instruction {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 18px;
+            font-size: 1.2em;
+            font-weight: 600;
+            z-index: 1000;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            text-align: center;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease-out;
+            border-bottom: 3px solid #3b82f6;
+        }
+        .paste-instruction.show {
+            transform: translateY(0);
+        }
+        .paste-instruction kbd {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 1em;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
         .flashcard-back .word-display {
             color: white;
             font-size: 2.2em;
@@ -165,9 +285,48 @@
             color: rgba(255, 255, 255, 0.9);
             font-size: 1.1em;
         }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 1.2em;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .edit-mode .delete-btn {
+            display: flex;
+        }
+        .delete-btn:hover {
+            background: rgba(220, 38, 38, 1);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .delete-btn:active {
+            transform: scale(0.95);
+        }
+        .edit-mode-btn {
+            background: rgba(251, 191, 36, 0.3);
+        }
+        .edit-mode-btn.active {
+            background: rgba(251, 191, 36, 0.5);
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
+    <div class="paste-instruction" id="pasteInstruction">Press <kbd>Ctrl+V</kbd> to paste image</div>
+    
     <div class="header">
         <h1>
             {% if language == 'es' %}🇪🇸{% elif language == 'fr' %}🇫🇷{% elif language == 'vi' %}🇻🇳{% endif %}
@@ -175,6 +334,12 @@
         </h1>
         <p class="count" id="cardCount">{{ flashcards|length }} words to learn</p>
         <div class="button-group">
+            <a href="/chatbot?lang={{ language }}" class="toggle-btn" style="text-decoration: none; background: rgba(52, 211, 153, 0.3);">
+                🤖 AI Chatbot
+            </a>
+            <button class="toggle-btn edit-mode-btn" onclick="toggleEditMode()" id="editModeBtn">
+                ✏️ Edit Mode
+            </button>
             <button class="toggle-btn" onclick="toggleLanguageDirection()" id="toggleBtn">
                 🔄 Show {{ language_name }} First
             </button>
@@ -192,21 +357,35 @@
     <div class="flashcards-grid">
         {% for card in flashcards %}
         <div class="flashcard" 
-             onclick="this.classList.toggle('flipped')"
+             onclick="handleCardClick(this)"
+             data-card-id="{{ card['id'] }}"
              data-english="{{ card['english_word'] }}"
              data-translation="{{ card['translated_word'] }}">
             <div class="flashcard-inner">
                 <div class="flashcard-front">
-                    <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
-                         alt="{{ card['english_word'] }}" 
-                         class="flashcard-image"
-                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-                    <div class="word-display front-word">{{ card['english_word'] }}</div>
-                    <div class="flip-hint">Click to reveal</div>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deleteCard(this, {{ card['id'] }})" title="Delete this card">🗑️</button>
+                    <div class="save-indicator">Saved ✓</div>
+                    <div class="flashcard-image-container" 
+                         tabindex="0"
+                         data-card-id="{{ card['id'] }}">
+                        <img src="{{ url_for('serve_image', filename=card['image_file']) }}" 
+                             alt="{{ card['english_word'] }}" 
+                             class="flashcard-image"
+                             data-card-id="{{ card['id'] }}"
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2550%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+                        <div class="change-image-btn">📋 Click & Paste Image</div>
+                    </div>
+                    <div class="word-display front-word" 
+                         contenteditable="false" 
+                         data-original="{{ card['english_word'] }}"
+                         onblur="saveCardEdit(this, {{ card['id'] }}, 'english')">{{ card['english_word'] }}</div>
+                    <div class="translation-display front-translation" 
+                         contenteditable="false" 
+                         data-original="{{ card['translated_word'] }}"
+                         onblur="saveCardEdit(this, {{ card['id'] }}, 'translation')">{{ card['translated_word'] }}</div>
                 </div>
                 <div class="flashcard-back">
                     <div class="word-display back-word">{{ card['translated_word'] }}</div>
-                    <div class="back-hint">Click to flip back</div>
                 </div>
             </div>
         </div>
@@ -215,19 +394,32 @@
     
     <script>
         let isReversed = false;
+        let isEditMode = false;
         const languageName = '{{ language_name }}';
         const totalCards = {{ flashcards|length }};
         
-        // Load saved preference from localStorage
+        // Load saved preferences from localStorage
         window.addEventListener('DOMContentLoaded', () => {
             const savedMode = localStorage.getItem('flashcardMode');
             if (savedMode === 'reversed') {
                 toggleLanguageDirection();
             }
             
+            const savedEditMode = localStorage.getItem('editMode');
+            if (savedEditMode === 'true') {
+                toggleEditMode();
+            }
+            
             // Add event listener for card limit input
             document.getElementById('cardLimit').addEventListener('input', filterCards);
         });
+        
+        function handleCardClick(card) {
+            // Don't flip if in edit mode
+            if (!isEditMode) {
+                card.classList.toggle('flipped');
+            }
+        }
         
         function filterCards() {
             const limit = parseInt(document.getElementById('cardLimit').value);
@@ -263,20 +455,69 @@
                 const translatedWord = card.dataset.translation;
                 const frontWord = card.querySelector('.front-word');
                 const backWord = card.querySelector('.back-word');
+                const frontTranslation = card.querySelector('.front-translation');
                 
                 if (isReversed) {
                     frontWord.textContent = translatedWord;
                     backWord.textContent = englishWord;
+                    frontTranslation.textContent = englishWord;
                     toggleBtn.innerHTML = '🔄 Show English First';
                 } else {
                     frontWord.textContent = englishWord;
                     backWord.textContent = translatedWord;
+                    frontTranslation.textContent = translatedWord;
                     toggleBtn.innerHTML = `🔄 Show ${languageName} First`;
                 }
             });
             
             // Save preference to localStorage
             localStorage.setItem('flashcardMode', isReversed ? 'reversed' : 'normal');
+        }
+        
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const grid = document.querySelector('.flashcards-grid');
+            const editModeBtn = document.getElementById('editModeBtn');
+            const allEditableFields = document.querySelectorAll('.front-word, .front-translation');
+            const allImageContainers = document.querySelectorAll('.flashcard-image-container');
+            
+            if (isEditMode) {
+                grid.classList.add('edit-mode');
+                editModeBtn.classList.add('active');
+                editModeBtn.innerHTML = '✅ Edit Mode ON';
+                // Enable contenteditable
+                allEditableFields.forEach(field => {
+                    field.setAttribute('contenteditable', 'true');
+                });
+                // Add paste handlers for images
+                allImageContainers.forEach(container => {
+                    container.addEventListener('click', handleImageContainerClick);
+                    container.addEventListener('paste', handleImagePaste);
+                    container.addEventListener('blur', handleImageContainerBlur);
+                });
+            } else {
+                grid.classList.remove('edit-mode');
+                editModeBtn.classList.remove('active');
+                editModeBtn.innerHTML = '✏️ Edit Mode';
+                // Disable contenteditable
+                allEditableFields.forEach(field => {
+                    field.setAttribute('contenteditable', 'false');
+                });
+                // Remove paste handlers
+                allImageContainers.forEach(container => {
+                    container.removeEventListener('click', handleImageContainerClick);
+                    container.removeEventListener('paste', handleImagePaste);
+                    container.removeEventListener('blur', handleImageContainerBlur);
+                });
+                // Hide global instruction
+                const instruction = document.getElementById('pasteInstruction');
+                if (instruction) {
+                    instruction.classList.remove('show');
+                }
+            }
+            
+            // Save preference to localStorage
+            localStorage.setItem('editMode', isEditMode);
         }
         
         function shuffleCards() {
@@ -294,6 +535,223 @@
             
             // Re-append cards in shuffled order
             cards.forEach(card => grid.appendChild(card));
+        }
+        
+        async function deleteCard(button, cardId) {
+            const card = button.closest('.flashcard');
+            const englishWord = card.dataset.english;
+            
+            if (!confirm(`Are you sure you want to delete "${englishWord}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/flashcard/${cardId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    // Animate card removal
+                    card.style.transition = 'transform 0.3s, opacity 0.3s';
+                    card.style.transform = 'scale(0)';
+                    card.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        card.remove();
+                        updateCardCount();
+                        filterCards(); // Update the count if filtering is active
+                    }, 300);
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to delete card: ${error.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error deleting card:', error);
+                alert('Failed to delete card. Please try again.');
+            }
+        }
+        
+        function updateCardCount() {
+            const cards = document.querySelectorAll('.flashcard');
+            const visibleCards = Array.from(cards).filter(card => card.style.display !== 'none');
+            const countElement = document.getElementById('cardCount');
+            const total = cards.length;
+            
+            if (visibleCards.length !== total) {
+                countElement.textContent = `Showing ${visibleCards.length} of ${total} words`;
+            } else {
+                countElement.textContent = `${total} words to learn`;
+            }
+        }
+        
+        async function saveCardEdit(element, cardId, fieldType) {
+            if (!isEditMode) return;
+            
+            const newValue = element.textContent.trim();
+            const originalValue = element.dataset.original;
+            
+            // If nothing changed, don't save
+            if (newValue === originalValue || newValue === '') {
+                element.textContent = originalValue; // Reset if empty
+                return;
+            }
+            
+            const card = element.closest('.flashcard');
+            const saveIndicator = card.querySelector('.save-indicator');
+            
+            try {
+                const updateData = {};
+                if (fieldType === 'english') {
+                    updateData.english_word = newValue;
+                } else if (fieldType === 'translation') {
+                    updateData.translated_word = newValue;
+                }
+                
+                const response = await fetch(`/api/flashcard/${cardId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    // Update the data attributes
+                    element.dataset.original = newValue;
+                    if (fieldType === 'english') {
+                        card.dataset.english = newValue;
+                    } else {
+                        card.dataset.translation = newValue;
+                    }
+                    
+                    // Show save indicator
+                    saveIndicator.classList.add('show');
+                    setTimeout(() => {
+                        saveIndicator.classList.remove('show');
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to save: ${error.error || 'Unknown error'}`);
+                    element.textContent = originalValue; // Revert on error
+                }
+            } catch (error) {
+                console.error('Error saving edit:', error);
+                alert('Failed to save changes. Please try again.');
+                element.textContent = originalValue; // Revert on error
+            }
+        }
+        
+        function handleImageContainerClick(event) {
+            if (!isEditMode) return;
+            event.stopPropagation(); // Prevent card flip
+            const container = event.currentTarget;
+            container.focus(); // Focus to enable paste
+            
+            // Show global paste instruction
+            const instruction = document.getElementById('pasteInstruction');
+            if (instruction) {
+                instruction.classList.add('show');
+            }
+        }
+        
+        function handleImageContainerBlur(event) {
+            // Hide global paste instruction
+            const instruction = document.getElementById('pasteInstruction');
+            if (instruction) {
+                instruction.classList.remove('show');
+            }
+        }
+        
+        async function handleImagePaste(event) {
+            if (!isEditMode) return;
+            
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const clipboardData = event.clipboardData || window.clipboardData;
+            if (!clipboardData) {
+                alert('Clipboard access not available.');
+                return;
+            }
+            
+            const items = clipboardData.items;
+            
+            // Find image in clipboard
+            let imageFile = null;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    imageFile = items[i].getAsFile();
+                    break;
+                }
+            }
+            
+            if (!imageFile) {
+                alert('No image found in clipboard. Copy an image first (Ctrl+C), then click the image area and paste (Ctrl+V).');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (imageFile.size > 5 * 1024 * 1024) {
+                alert('Image size must be less than 5MB.');
+                return;
+            }
+            
+            const container = event.currentTarget;
+            const cardId = container.dataset.cardId;
+            
+            // Hide global instruction on successful paste
+            const instruction = document.getElementById('pasteInstruction');
+            if (instruction) {
+                instruction.classList.remove('show');
+            }
+            
+            await uploadImageFile(imageFile, cardId);
+        }
+        
+        async function uploadImageFile(file, cardId) {
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please paste a valid image.');
+                return;
+            }
+            
+            const card = document.querySelector(`.flashcard[data-card-id="${cardId}"]`);
+            const saveIndicator = card.querySelector('.save-indicator');
+            const imageElement = card.querySelector('.flashcard-image');
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                const response = await fetch(`/api/flashcard/${cardId}/image`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    // Update the image src with cache-busting parameter
+                    imageElement.src = `/images/${result.filename}?t=${Date.now()}`;
+                    
+                    // Show save indicator
+                    saveIndicator.classList.add('show');
+                    setTimeout(() => {
+                        saveIndicator.classList.remove('show');
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to upload image: ${error.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                alert('Failed to upload image. Please try again.');
+            }
         }
     </script>
 </body>

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS Word_Image (
   id INTEGER PRIMARY KEY,
   english_word TEXT NOT NULL,
   image_file TEXT
+)
 ''')
 
 cur.execute('''
